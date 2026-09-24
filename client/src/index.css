@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Extra-small breakpoint so 240–359px screens can be handled deliberately. */
+  --breakpoint-xs: 22.5rem;
+
+  /* System fonts: no web-font download on slow, expensive mobile data. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --color-brand-50: #eef3fb;
+  --color-brand-100: #d8e3f5;
+  --color-brand-200: #b3c6ea;
+  --color-brand-300: #82a0d9;
+  --color-brand-500: #2f5fb3;
+  --color-brand-600: #234b93;
+  --color-brand-700: #1b3a75;
+  --color-brand-800: #142c5c;
+  --color-brand-900: #0b1f4d;
+  --color-brand-950: #07142f;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-white font-sans text-slate-900 antialiased;
+    /* Long names, emails and URLs wrap instead of pushing the page wider than the screen. */
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  img,
+  video,
+  iframe,
+  svg {
+    max-width: 100%;
+  }
+
+  img,
+  video {
+    height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
