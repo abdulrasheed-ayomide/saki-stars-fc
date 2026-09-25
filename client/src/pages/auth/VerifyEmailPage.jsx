@@ -9,6 +9,7 @@ import { Button, ButtonLink } from '../../components/ui/Button.jsx';
 import { Alert } from '../../components/ui/Feedback.jsx';
 import { PageSpinner } from '../../components/ui/Spinner.jsx';
 import { AuthCard } from './AuthCard.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /** Confirms the email link, or lets the user request a new one. */
 export default function VerifyEmailPage() {
@@ -29,7 +30,7 @@ export default function VerifyEmailPage() {
         setResult({ state: 'ok', message: d.message });
         if (status === 'authenticated') await reload().catch(() => {});
       })
-      .catch((err) => setResult({ state: 'error', message: err.message }));
+      .catch((err) => setResult({ state: 'error', message: userMessage(err, 'register') }));
   }, [token, status, reload]);
 
   async function resend(e) {
@@ -38,7 +39,7 @@ export default function VerifyEmailPage() {
       const d = await apiRequest('/auth/resend-verification', { method: 'POST', body: { email }, withAuth: false });
       setResent(d.message);
     } catch (err) {
-      setResent(err.message);
+      setResent(userMessage(err, 'register'));
     }
   }
 

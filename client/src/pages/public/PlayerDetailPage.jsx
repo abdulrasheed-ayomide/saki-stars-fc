@@ -20,7 +20,7 @@ export default function PlayerDetailPage() {
   useSeo({ title: p?.name || 'Player', description: p ? `${p.name}, ${p.position}${p.team ? ` for ${p.team.name}` : ''}.` : undefined, image: p?.photo?.url, type: 'profile' });
 
   if (state.error?.status === 404) return <NotFoundPage />;
-  if (state.error && !p) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} /></Container>;
+  if (state.error && !p) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} context="players" /></Container>;
   if (!p) return <Container className="py-10"><SkeletonGrid items={2} /></Container>;
 
   return (

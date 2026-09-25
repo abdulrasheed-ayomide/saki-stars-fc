@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
         </Alert>
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <FormError error={form.formError} />
+          <FormError error={form.formError} context="passwordReset" />
           <Field label="Email address" error={form.errors.email} required>
             <Input type="email" value={form.values.email} onChange={form.set('email')} autoComplete="email" autoFocus />
           </Field>

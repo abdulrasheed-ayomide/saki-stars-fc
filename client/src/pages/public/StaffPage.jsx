@@ -49,7 +49,7 @@ export default function StaffPage() {
       <PageBanner eyebrow="Club staff" title="Our people" description="The management, coaching and operations team behind the club." />
       <Container className="py-8">
         <Tabs tabs={TABS} value={tab} onChange={setTab} label="Staff groups" className="mb-6" />
-        <AsyncContent state={state} loading={<SkeletonGrid items={6} itemClass="h-28" />}>
+        <AsyncContent state={state} context="staff" loading={<SkeletonGrid items={6} itemClass="h-28" />}>
           {(list) => {
             const shown = tab === 'all' ? list : list.filter((s) => s.category === tab);
             return shown.length ? (

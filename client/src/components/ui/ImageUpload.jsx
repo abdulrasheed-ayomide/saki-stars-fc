@@ -3,6 +3,7 @@ import { ImagePlus, Trash2, Upload } from 'lucide-react';
 import { uploadFile } from '../../services/apiClient.js';
 import { imageUrl } from '../../lib/media.js';
 import { Button } from './Button.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /**
  * Uploads an image (or video) through the API to Cloudinary and returns the media
@@ -24,7 +25,7 @@ export function MediaUpload({ value, onChange, folder, kind = 'image', label = '
       const media = await uploadFile(`/media/upload?folder=${folder}&kind=${kind}`, file, { alt: value?.alt || '' });
       onChange({ ...media, alt: value?.alt || '' });
     } catch (err) {
-      setError(err.message);
+      setError(userMessage(err, 'upload'));
     } finally {
       setBusy(false);
     }

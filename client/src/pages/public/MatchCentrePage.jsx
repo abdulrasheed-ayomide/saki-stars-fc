@@ -42,7 +42,7 @@ export default function MatchCentrePage() {
   useSeo({ title, description: m ? `${title}, ${m.competition?.name}, ${formatDateLong(m.kickoffAt, settings.timezone)}.` : undefined });
 
   if (state.error?.status === 404) return <NotFoundPage />;
-  if (state.error && !m) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} /></Container>;
+  if (state.error && !m) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} context="match" /></Container>;
   if (!m) return <Container className="py-10"><SkeletonList rows={5} /></Container>;
 
   const played = m.status === 'completed' || (m.status === 'abandoned' && m.score);

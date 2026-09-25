@@ -32,7 +32,7 @@ export default function CompetitionDetailPage() {
   useSeo({ title: c?.name || 'Competition', description: c?.description?.slice(0, 200) });
 
   if (comp.error?.status === 404) return <NotFoundPage />;
-  if (comp.error && !c) return <Container className="py-10"><ErrorState error={comp.error} onRetry={comp.reload} /></Container>;
+  if (comp.error && !c) return <Container className="py-10"><ErrorState error={comp.error} onRetry={comp.reload} context="competitions" /></Container>;
   if (!c) return <Container className="py-10"><SkeletonList /></Container>;
 
   const setTab = (v) => {
@@ -43,7 +43,7 @@ export default function CompetitionDetailPage() {
   };
 
   const matchList = (st, emptyTitle) => (
-    <AsyncContent state={st} isEmpty={(d) => !d.length} empty={<EmptyState icon={CalendarDays} title={emptyTitle} />}>
+    <AsyncContent state={st} context="fixtures" isEmpty={(d) => !d.length} empty={<EmptyState icon={CalendarDays} title={emptyTitle} />}>
       {(list) => (
         <div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
           {list.map((m) => (
@@ -120,7 +120,7 @@ export default function CompetitionDetailPage() {
             {c.type !== 'friendly' && (
               <div className="min-w-0">
                 <h2 className="mb-2 font-semibold text-brand-900">Table</h2>
-                <AsyncContent state={table} isEmpty={(d) => !d.rows.length} empty={<EmptyState icon={Trophy} title="No table yet" />}>
+                <AsyncContent state={table} context="standings" isEmpty={(d) => !d.rows.length} empty={<EmptyState icon={Trophy} title="No table yet" />}>
                   {(d) => <StandingsTable rows={d.rows} compact />}
                 </AsyncContent>
               </div>
@@ -129,7 +129,7 @@ export default function CompetitionDetailPage() {
         )}
 
         {tab === 'table' && (
-          <AsyncContent state={table} isEmpty={(d) => !d.applicable || !d.rows.length} empty={<EmptyState icon={Trophy} title="The table will appear once results are recorded" />}>
+          <AsyncContent state={table} context="standings" isEmpty={(d) => !d.applicable || !d.rows.length} empty={<EmptyState icon={Trophy} title="The table will appear once results are recorded" />}>
             {(d) => (
               <>
                 <StandingsTable rows={d.rows} />
@@ -144,7 +144,7 @@ export default function CompetitionDetailPage() {
         {tab === 'fixtures' && matchList(fixtures, 'No upcoming fixtures in this competition')}
         {tab === 'results' && matchList(results, 'No results yet')}
         {tab === 'news' && (
-          <AsyncContent state={news} isEmpty={(d) => !d.length} empty={<EmptyState icon={Newspaper} title="No news about this competition yet" />}>
+          <AsyncContent state={news} context="news" isEmpty={(d) => !d.length} empty={<EmptyState icon={Newspaper} title="No news about this competition yet" />}>
             {(list) => (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {list.map((a) => (

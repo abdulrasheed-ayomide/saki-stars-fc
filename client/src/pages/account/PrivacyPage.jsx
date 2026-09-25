@@ -12,6 +12,7 @@ import { Alert } from '../../components/ui/Feedback.jsx';
 import { ConfirmDialog } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { formatDate } from '../../lib/format.js';
+import { userMessage } from '../../lib/errors.js';
 
 /** Consent versions, data export and deletion requests (handled by authorised staff and audited). */
 export default function PrivacyPage() {
@@ -47,7 +48,7 @@ export default function PrivacyPage() {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy('');
     }

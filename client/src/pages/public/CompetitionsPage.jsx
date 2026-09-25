@@ -15,7 +15,7 @@ export default function CompetitionsPage() {
     <>
       <PageBanner eyebrow="Competitions" title="Where we compete" />
       <Container className="py-8">
-        <AsyncContent state={state} loading={<SkeletonGrid items={3} itemClass="h-40" />} isEmpty={(d) => !d.length} empty={<EmptyState icon={Trophy} title="No competitions have been added yet" />}>
+        <AsyncContent state={state} context="competitions" loading={<SkeletonGrid items={3} itemClass="h-40" />} isEmpty={(d) => !d.length} empty={<EmptyState icon={Trophy} title="No competitions have been added yet" />}>
           {(list) => (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((c) => (

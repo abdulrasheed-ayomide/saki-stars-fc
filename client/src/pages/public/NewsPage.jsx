@@ -50,7 +50,7 @@ export default function NewsPage() {
             </Select>
           </Field>
         </div>
-        <AsyncContent state={state} loading={<SkeletonGrid items={6} />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Newspaper} title="No articles found">{q || category ? 'Try a different search.' : 'News will be published here.'}</EmptyState>}>
+        <AsyncContent state={state} context="news" loading={<SkeletonGrid items={6} />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Newspaper} title="No articles found">{q || category ? 'Try a different search.' : 'News will be published here.'}</EmptyState>}>
           {(d) => (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

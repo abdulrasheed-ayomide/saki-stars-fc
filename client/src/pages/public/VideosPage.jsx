@@ -49,7 +49,7 @@ export default function VideosPage() {
             ))}
           </ul>
         </div>
-        <AsyncContent state={state} loading={<SkeletonGrid items={6} />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Video} title="No videos yet">Videos will appear here once the media team publishes them.</EmptyState>}>
+        <AsyncContent state={state} context="videos" loading={<SkeletonGrid items={6} />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Video} title="No videos yet">Videos will appear here once the media team publishes them.</EmptyState>}>
           {(d) => (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

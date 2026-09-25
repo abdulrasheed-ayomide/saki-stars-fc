@@ -39,8 +39,8 @@ export default function FixturesResultsPage() {
     const groups = [];
     for (const m of state.data?.items || []) {
       const key = formatMonthYear(m.kickoffAt, settings.timezone);
-      if (!groups.length || groups.at(-1).key !== key) groups.push({ key, items: [] });
-      groups.at(-1).items.push(m);
+      if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, items: [] });
+      groups[groups.length - 1].items.push(m);
     }
     return groups;
   }, [state.data, settings.timezone]);
@@ -102,6 +102,7 @@ export default function FixturesResultsPage() {
 
         <AsyncContent
           state={state}
+          context={status === 'completed' ? 'results' : 'fixtures'}
           loading={<SkeletonList rows={6} />}
           isEmpty={(d) => !d.items.length}
           empty={

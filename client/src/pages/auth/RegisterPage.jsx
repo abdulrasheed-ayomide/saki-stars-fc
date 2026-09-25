@@ -64,7 +64,7 @@ export default function RegisterPage() {
       }
     >
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <FormError error={form.formError} />
+        <FormError error={form.formError} context="register" />
         <Field label="Full name" error={errors.name} required>
           <Input value={values.name} onChange={set('name')} autoComplete="name" maxLength={120} autoFocus />
         </Field>

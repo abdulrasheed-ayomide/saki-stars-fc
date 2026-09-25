@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
         </>
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <FormError error={form.formError} />
+          <FormError error={form.formError} context="passwordReset" />
           {form.formError?.code === 'BAD_REQUEST' && (
             <p className="text-sm">
               <Link to="/forgot-password" className="font-semibold underline">

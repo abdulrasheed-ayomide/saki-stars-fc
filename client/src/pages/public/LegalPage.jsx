@@ -24,6 +24,7 @@ export default function LegalPage({ doc }) {
       <Container className="max-w-3xl py-8">
         <AsyncContent
           state={state}
+          context="page"
           loading={<SkeletonList rows={4} />}
           isEmpty={(d) => !d.body}
           empty={

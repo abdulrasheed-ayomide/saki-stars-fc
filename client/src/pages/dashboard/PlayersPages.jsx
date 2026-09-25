@@ -23,6 +23,7 @@ import { StatGrid } from '../../components/football/StatGrid.jsx';
 import { POSITIONS } from '../../lib/labels.js';
 import { formatDate, toDateInput } from '../../lib/format.js';
 import { FilterBar, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 const STATUSES = [
   ['active', 'Active'],
@@ -187,7 +188,7 @@ function PlayerForm({ player, onSaved }) {
       notify('Player archived. Their match history is kept.');
       navigate('/dashboard/players');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -397,7 +398,7 @@ function Documents({ player, onChanged, canHighly }) {
       notify('Document stored privately.');
       onChanged();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
     }
@@ -407,7 +408,7 @@ function Documents({ player, onChanged, canHighly }) {
       const { url } = await apiRequest(`/admin/players/${player.id}/documents/${d.id}`);
       window.open(url, '_blank', 'noopener');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
   async function doRemove() {
@@ -416,7 +417,7 @@ function Documents({ player, onChanged, canHighly }) {
       notify('Document deleted.');
       onChanged();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setRemove(null);
     }

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { useApi } from '../../hooks/useApi.js';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /** Runs an API action with a busy flag and success/error toasts. */
 export function useAction() {
@@ -15,7 +16,7 @@ export function useAction() {
         if (success) notify(typeof success === 'function' ? success(result) : success);
         return result;
       } catch (err) {
-        notify(err.message || 'That did not work. Please try again.', 'error');
+        notify(userMessage(err, 'save'), 'error');
         return undefined;
       } finally {
         setBusy(null);

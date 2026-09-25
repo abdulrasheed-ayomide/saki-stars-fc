@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { CheckCircle2, X, XCircle, Info } from 'lucide-react';
+import { userMessage } from '../../lib/errors.js';
 
 const ToastContext = createContext({ notify: () => {} });
 let nextId = 1;
@@ -10,6 +11,8 @@ export function ToastProvider({ children }) {
   const notify = useCallback(
     (message, tone = 'success') => {
       const id = nextId++;
+      // Safety net: an Error object passed by mistake is turned into safe wording, never shown raw.
+      if (typeof message !== 'string') message = userMessage(message, 'action');
       setToasts((t) => [...t.slice(-3), { id, message, tone }]);
       setTimeout(() => dismiss(id), tone === 'error' ? 8000 : 4500);
     },

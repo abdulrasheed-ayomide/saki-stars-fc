@@ -14,7 +14,7 @@ export default function TeamsPage() {
     <>
       <PageBanner eyebrow="Teams" title="Our teams" description="Every squad that represents the club." />
       <Container className="py-8">
-        <AsyncContent state={state} loading={<SkeletonGrid items={3} itemClass="h-48" />} isEmpty={(d) => !d.length} empty={<EmptyState icon={Users} title="No teams have been added yet" />}>
+        <AsyncContent state={state} context="teams" loading={<SkeletonGrid items={3} itemClass="h-48" />} isEmpty={(d) => !d.length} empty={<EmptyState icon={Users} title="No teams have been added yet" />}>
           {(teams) => (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {teams.map((t) => (

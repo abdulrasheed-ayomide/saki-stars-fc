@@ -11,6 +11,7 @@ import { Textarea } from '../ui/Field.jsx';
 import { Alert, ErrorState, SkeletonList } from '../ui/Feedback.jsx';
 import { Modal } from '../ui/Modal.jsx';
 import { timeAgo } from '../../lib/format.js';
+import { userMessage } from '../../lib/errors.js';
 
 function CommentForm({ onSubmit, initial = '', submitLabel = 'Post comment', onCancel, autoFocus }) {
   const [body, setBody] = useState(initial);
@@ -24,7 +25,7 @@ function CommentForm({ onSubmit, initial = '', submitLabel = 'Post comment', onC
       await onSubmit(body.trim());
       setBody('');
     } catch (err) {
-      setError(err.message);
+      setError(userMessage(err, 'save'));
     } finally {
       setBusy(false);
     }
@@ -97,7 +98,7 @@ export function Comments({ targetType, targetId }) {
       setReporting(null);
       setReason('');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -191,7 +192,7 @@ export function Comments({ targetType, targetId }) {
 
       <div className="mt-4">
         {state.error && !state.data ? (
-          <ErrorState error={state.error} onRetry={state.reload} title="Comments could not be loaded" />
+          <ErrorState error={state.error} onRetry={state.reload} context="comments" />
         ) : state.loading && !state.data ? (
           <SkeletonList rows={2} />
         ) : top.length === 0 ? (

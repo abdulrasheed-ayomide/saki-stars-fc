@@ -19,6 +19,7 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import { formatDate, formatDateTime, timeAgo } from '../../lib/format.js';
 import { USER_STATUS_LABELS } from '../../lib/labels.js';
 import { FilterBar } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 export function UsersListPage() {
   useSeo({ title: 'Users', noindex: true });
@@ -127,7 +128,7 @@ export function UserDetailPage() {
       if (action === 'anonymize') navigate('/dashboard/users');
       else state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
     }

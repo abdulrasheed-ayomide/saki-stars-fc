@@ -23,6 +23,7 @@ import { StaffCard } from '../public/StaffPage.jsx';
 import { NotificationCentre } from '../account/NotificationsPage.jsx';
 import { formatDate, timeAgo, toDateInput } from '../../lib/format.js';
 import { Markdown } from '../../lib/markdown.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 function Completion({ completion }) {
   return (
@@ -411,7 +412,7 @@ export function PortalDocuments() {
       const { url } = await apiRequest(`/portal/documents/${doc.id}`);
       window.open(url, '_blank', 'noopener');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -421,7 +422,7 @@ export function PortalDocuments() {
       notify('Document removed.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setRemove(null);
     }
@@ -451,7 +452,7 @@ export function PortalDocuments() {
           <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={upload} />
         </div>
         <p className="mt-2 text-xs text-slate-500">PDF, JPG or PNG, up to 10 MB.</p>
-        {error && <Alert tone="error" className="mt-3">{error.message}</Alert>}
+        {error && <Alert tone="error" className="mt-3">{userMessage(error, 'upload')}</Alert>}
       </Card>
       <AsyncContent state={state} isEmpty={(p) => !p.personal.documents.length} empty={<EmptyState icon={FileText} title="No documents uploaded" />}>
         {(p) => (

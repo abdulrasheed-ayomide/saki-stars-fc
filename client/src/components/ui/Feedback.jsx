@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from './Button.jsx';
+import { classifyError, errorTitle, isRetryable, userMessage } from '../../lib/errors.js';
 
 const TONES = {
   info: ['border-brand-200 bg-brand-50 text-brand-900', Info],
@@ -33,15 +34,22 @@ export function EmptyState({ icon: Icon, title, children, action, className = ''
   );
 }
 
-/** Friendly error with the request ID (for support) and a retry button. */
-export function ErrorState({ error, onRetry, title = 'This could not be loaded', className = '' }) {
+/**
+ * Friendly error panel. Never shows technical text: the message comes from userMessage(),
+ * worded for the part of the site given by `context` (see lib/errors.js). "Try again" re-runs
+ * the failed request and is only offered when retrying can help.
+ */
+export function ErrorState({ error, onRetry, title, context = 'default', className = '' }) {
+  const retry = onRetry && isRetryable(error);
+  // The heading already says what is unavailable; the body then only says what to do.
+  const body = ['server', 'unexpected', 'aborted'].includes(classifyError(error)) ? 'Please try again in a moment.' : userMessage(error, context);
   return (
     <div role="alert" className={`rounded-lg border border-red-200 bg-red-50 px-4 py-8 text-center text-red-900 ${className}`}>
       <AlertTriangle aria-hidden="true" className="mx-auto size-8" />
-      <p className="mt-2 font-semibold">{title}</p>
-      <p className="mx-auto mt-1 max-w-md text-sm">{error?.message || 'Please try again.'}</p>
+      <p className="mt-2 font-semibold">{title || errorTitle(context)}</p>
+      <p className="mx-auto mt-1 max-w-md text-sm">{body}</p>
       {error?.requestId && <p className="mt-1 text-xs text-red-700">Reference: {error.requestId}</p>}
-      {onRetry && (
+      {retry && (
         <Button variant="outline" size="sm" icon={RefreshCw} onClick={onRetry} className="mt-4">
           Try again
         </Button>
@@ -80,8 +88,8 @@ export function SkeletonGrid({ items = 6, className = 'grid-cols-1 xs:grid-cols-
  * Standard loading / error / empty handling for a useApi() result.
  * Renders children(data) once there is data.
  */
-export function AsyncContent({ state, loading, empty, isEmpty, errorTitle, children }) {
-  if (state.error && !state.data) return <ErrorState error={state.error} onRetry={state.reload} title={errorTitle} />;
+export function AsyncContent({ state, loading, empty, isEmpty, errorTitle: title, context, children }) {
+  if (state.error && !state.data) return <ErrorState error={state.error} onRetry={state.reload} title={title} context={context} />;
   if (state.loading && !state.data) return loading ?? <SkeletonList />;
   if (!state.data) return null;
   if (isEmpty?.(state.data)) return empty ?? null;

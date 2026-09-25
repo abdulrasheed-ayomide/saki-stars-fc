@@ -23,6 +23,7 @@ import { NotificationCentre } from '../account/NotificationsPage.jsx';
 import { formatDate, formatDateTime, timeAgo, toDateInput } from '../../lib/format.js';
 import { titleCase } from '../../lib/labels.js';
 import { FilterBar, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 // ------------------------------------------------------------------------------------- Reports
 const REPORT_TYPES = ['general', 'match', 'training', 'observation', 'incident', 'recommendation', 'medical', 'technical'];
@@ -118,7 +119,7 @@ export function ReportDetailPage() {
       notify('Review saved. The author has been notified.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
     }
@@ -178,7 +179,7 @@ export function ScoutingPage() {
       await apiRequest(`/admin/scouting/assignments/${a.id}`, { method: 'PATCH', body: { status } });
       assignments.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
   return (
@@ -348,7 +349,7 @@ function ScoutingReportForm({ report, reload }) {
       const m = await uploadFile('/media/upload?folder=scouting&kind=image', file);
       set('attachments')([...v.attachments, m]);
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setUploading(false);
     }
@@ -359,7 +360,7 @@ function ScoutingReportForm({ report, reload }) {
       const { url } = await apiRequest(`/admin/scouting/reports/${report.id}/attachments/${i}`);
       window.open(url, '_blank', 'noopener');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -369,7 +370,7 @@ function ScoutingReportForm({ report, reload }) {
       notify('Report deleted.');
       navigate('/dashboard/scouting');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -459,7 +460,7 @@ export function ContactAdminPage() {
       messages.reload();
       setOpen(null);
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
   async function view(m) {
@@ -493,7 +494,7 @@ export function ContactAdminPage() {
       )}
       {tab === 'subscribers' && (
         <>
-          <Button variant="outline" icon={Download} className="mb-4" onClick={() => downloadFile('/admin/contact/subscribers?format=csv', 'subscribers.csv').catch((err) => notify(err.message, 'error'))}>Download CSV</Button>
+          <Button variant="outline" icon={Download} className="mb-4" onClick={() => downloadFile('/admin/contact/subscribers?format=csv', 'subscribers.csv').catch((err) => notify(userMessage(err, 'action'), 'error'))}>Download CSV</Button>
           <AsyncContent state={subs} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Inbox} title="No confirmed subscribers yet" />}>
             {(d) => (
               <>

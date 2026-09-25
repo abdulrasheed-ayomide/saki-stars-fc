@@ -66,6 +66,7 @@ export default function PlayersPage() {
 
         <AsyncContent
           state={state}
+          context="players"
           loading={<SkeletonGrid items={8} className="grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" itemClass="h-72" />}
           isEmpty={(d) => !d.items.length}
           empty={<EmptyState icon={Users} title="No players found">{q || team || position ? 'Try different filters.' : 'Player profiles will be published here.'}</EmptyState>}

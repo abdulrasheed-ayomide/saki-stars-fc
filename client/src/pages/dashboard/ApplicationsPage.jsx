@@ -22,6 +22,7 @@ import { formatDate, formatDateTime } from '../../lib/format.js';
 import { POSITIONS, STAFF_ROLE_LABELS } from '../../lib/labels.js';
 import { useTeams } from './shared.jsx';
 import { AccessEditor } from './StaffPages.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 export default function ApplicationsPage() {
   useSeo({ title: 'Applications', noindex: true });
@@ -287,7 +288,7 @@ function Reject({ kind, app, onClose, onDone }) {
       onClose();
       onDone();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
     }

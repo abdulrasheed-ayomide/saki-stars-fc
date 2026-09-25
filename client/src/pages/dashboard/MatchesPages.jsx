@@ -23,6 +23,7 @@ import { Markdown } from '../../lib/markdown.jsx';
 import { formatDateTime, fromLocalInput, toLocalInput } from '../../lib/format.js';
 import { EVENT_LABELS, MATCH_STATUS_LABELS } from '../../lib/labels.js';
 import { FilterBar, useCompetitions, useSeasons, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 export function MatchesListPage() {
   useSeo({ title: 'Fixtures & results', noindex: true });
@@ -116,7 +117,7 @@ function MatchEditor({ match, reload }) {
       notify('Fixture deleted.');
       navigate('/dashboard/matches');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
       setDel(false);
     }
   }
@@ -451,7 +452,7 @@ function ReportForm({ match, onSaved }) {
       notify(publish ? 'Report published on the Match Centre.' : 'Report saved.');
       onSaved();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy('');
     }
@@ -518,7 +519,7 @@ function HighlightsForm({ match, onSaved }) {
       notify('Highlights updated.');
       onSaved();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
     }

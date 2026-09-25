@@ -21,7 +21,7 @@ export default function NewsArticlePage() {
   useSeo({ title: a?.title || 'News', description: a?.excerpt, image: a?.featuredImage?.url, type: 'article' });
 
   if (state.error?.status === 404) return <NotFoundPage />;
-  if (state.error && !a) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} /></Container>;
+  if (state.error && !a) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} context="news" /></Container>;
   if (!a) return <Container className="py-10"><SkeletonList rows={6} /></Container>;
 
   return (

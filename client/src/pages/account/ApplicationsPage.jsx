@@ -17,6 +17,7 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal.jsx';
 import { formatDate } from '../../lib/format.js';
 import { POSITIONS, APPLY_ROLES, STAFF_ROLE_LABELS } from '../../lib/labels.js';
+import { userMessage } from '../../lib/errors.js';
 
 function ageFrom(dob) {
   if (!dob) return null;
@@ -59,7 +60,7 @@ function PlayerApplicationForm({ onDone }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError error={form.formError} />
+      <FormError error={form.formError} context="application" />
       <p className="text-sm text-slate-600">Your personal details are private. They are only seen by authorised club staff and are never shown on the public website.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="First name" required error={e.firstName}>
@@ -175,7 +176,7 @@ function StaffApplicationForm({ onDone }) {
   });
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError error={form.formError} />
+      <FormError error={form.formError} context="application" />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name" required error={e.fullName}>
           <Input value={v.fullName} onChange={set('fullName')} maxLength={120} />
@@ -245,7 +246,7 @@ export default function ApplicationsPage() {
       notify('Application withdrawn.');
       list.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setWithdraw(null);
     }

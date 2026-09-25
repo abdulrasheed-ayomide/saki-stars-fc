@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiRequest } from '../../services/apiClient.js';
 import { Button } from '../ui/Button.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /** Double opt-in subscription: the person must click the link in the confirmation email. */
 export function NewsletterForm({ tone = 'dark' }) {
@@ -16,7 +17,7 @@ export function NewsletterForm({ tone = 'dark' }) {
       setState({ status: 'done', message: res.message });
       setEmail('');
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'error', message: userMessage(err, 'newsletter') });
     }
   }
 

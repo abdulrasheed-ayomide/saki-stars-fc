@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { fieldMessage, logError } from '../../lib/errors.js';
 
 /**
  * Minimal form state: values, per-field errors (including those returned by the API
@@ -30,10 +31,11 @@ export function useForm(initial) {
       } catch (err) {
         if (err?.code === 'VALIDATION_ERROR' && Array.isArray(err.details)) {
           const map = {};
-          for (const d of err.details) map[d.path] = map[d.path] || d.message;
+          for (const d of err.details) map[d.path] = map[d.path] || fieldMessage(d.message);
           setErrors(map);
           setFormError(err);
         } else {
+          if (!err?.status) logError(err, 'form submit');
           setFormError(err);
         }
         return undefined;
@@ -56,7 +58,7 @@ function setPath(obj, path, value) {
     cur[k] = Array.isArray(cur[k]) ? [...cur[k]] : { ...(cur[k] || {}) };
     cur = cur[k];
   }
-  cur[keys.at(-1)] = value;
+  cur[keys[keys.length - 1]] = value;
   return out;
 }
 

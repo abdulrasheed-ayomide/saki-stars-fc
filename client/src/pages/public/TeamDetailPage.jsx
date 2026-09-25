@@ -23,7 +23,7 @@ export default function TeamDetailPage() {
   useSeo({ title: team?.name || 'Team', description: team?.description?.slice(0, 200) });
 
   if (state.error?.status === 404) return <NotFoundPage />;
-  if (state.error && !team) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} /></Container>;
+  if (state.error && !team) return <Container className="py-10"><ErrorState error={state.error} onRetry={state.reload} context="teams" /></Container>;
   if (!team) return <Container className="py-10"><SkeletonGrid items={6} /></Container>;
 
   const r = team.record;

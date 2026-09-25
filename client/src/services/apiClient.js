@@ -1,14 +1,60 @@
 import { site } from '../config/site.js';
+import { classifyError, isSafeServerMessage, logError, userMessage } from '../lib/errors.js';
 
+/**
+ * Every failure from this module is an ApiError whose `message` is ALWAYS safe to show a user.
+ * The technical detail lives in `developerMessage` / `cause` for the console and debugging.
+ */
 export class ApiError extends Error {
-  constructor({ status, code, message, requestId, details }) {
-    super(message);
+  constructor({ status = 0, code = 'UNEXPECTED', serverMessage, requestId, details, developerMessage, cause }) {
+    super('');
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.requestId = requestId;
     this.details = details;
+    this.serverMessage = serverMessage;
+    this.serverMessageSafe = isSafeServerMessage(serverMessage) && status > 0 && status < 500;
+    this.developerMessage = developerMessage || serverMessage || code;
+    if (cause) this.cause = cause;
+    this.kind = classifyError({ status, code });
+    this.message = userMessage(this);
   }
+}
+
+/** Wraps anything that is not already an ApiError (a bug, a browser quirk) so it is safe to display. */
+export function toApiError(err) {
+  if (err instanceof ApiError) return err;
+  const wrapped = new ApiError({ code: 'UNEXPECTED', developerMessage: err?.message || String(err), cause: err });
+  logError(wrapped, 'unexpected error');
+  return wrapped;
+}
+
+/**
+ * A signal that aborts after `ms` or when the caller's `signal` aborts. Built from
+ * AbortController + setTimeout because AbortSignal.timeout()/any() are missing on
+ * older iPhones (iOS 15 and earlier / Safari < 16), which broke every page there.
+ */
+function timeoutSignal(signal, ms) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, ms);
+  const onAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    done: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener?.('abort', onAbort);
+    },
+  };
 }
 
 // ---- Session state ------------------------------------------------------------------
@@ -48,17 +94,17 @@ function recordServerTime(response) {
   if (!Number.isNaN(t)) serverOffsetMs = t - Date.now();
 }
 
-function networkError(timedOut) {
+function networkError(timedOut, cause) {
   return new ApiError({
     status: 0,
     code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR',
-    message: timedOut ? 'The server took too long to respond. Please try again.' : 'Could not reach the server. Check your internet connection and try again.',
+    developerMessage: timedOut ? 'Request timed out' : `Network request failed: ${cause?.message || cause}`,
+    cause,
   });
 }
 
 async function rawFetch(path, { method = 'GET', body, formData, signal, timeoutMs = 15_000, withAuth = true, headers = {} }) {
-  const timeout = AbortSignal.timeout(timeoutMs);
-  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const limit = timeoutSignal(signal, timeoutMs);
   const h = { Accept: 'application/json', ...headers };
   if (body !== undefined) h['Content-Type'] = 'application/json';
   if (withAuth && accessToken) h.Authorization = `Bearer ${accessToken}`;
@@ -68,27 +114,36 @@ async function rawFetch(path, { method = 'GET', body, formData, signal, timeoutM
       credentials: 'include',
       headers: h,
       body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
-      signal: combined,
+      signal: limit.signal,
     });
     recordServerTime(response);
     return response;
   } catch (err) {
     if (signal?.aborted) throw err; // caller cancelled; let it propagate unchanged
-    throw networkError(timeout.aborted);
+    const error = networkError(limit.timedOut(), err);
+    logError(error, `${method} ${path}`);
+    throw error;
+  } finally {
+    limit.done();
   }
 }
 
 async function toResult(response) {
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = payload?.error ?? {};
-    throw new ApiError({
+    // Only our API's JSON envelope carries a message written for users; anything else
+    // (a proxy's HTML error page, an empty body) gets a message from its status.
+    const error = payload && typeof payload.error === 'object' ? payload.error : {};
+    const apiError = new ApiError({
       status: response.status,
       code: error.code || 'HTTP_ERROR',
-      message: error.message || 'Something went wrong. Please try again.',
+      serverMessage: error.code ? error.message : undefined,
       requestId: error.requestId,
-      details: error.details,
+      details: Array.isArray(error.details) ? error.details : undefined,
+      developerMessage: `HTTP ${response.status} ${error.code || ''} ${error.message || ''}`.trim(),
     });
+    logError(apiError, response.url);
+    throw apiError;
   }
   return payload?.data;
 }
@@ -141,6 +196,15 @@ const ENDED = new Set(['SESSION_REVOKED', 'ACCOUNT_INACTIVE']);
  * refreshed once, silently, and the request is retried.
  */
 export async function apiRequest(path, options = {}) {
+  try {
+    return await request(path, options);
+  } catch (err) {
+    if (options.signal?.aborted && err?.name === 'AbortError') throw err;
+    throw toApiError(err);
+  }
+}
+
+async function request(path, options) {
   let response = await rawFetch(path, options);
   if (response.status === 401 && accessToken && options.withAuth !== false) {
     const payload = await response.clone().json().catch(() => null);
@@ -175,6 +239,8 @@ export async function signIn(email, password) {
 export async function signOut() {
   try {
     await rawFetch('/auth/logout', { method: 'POST', withAuth: false, headers: { 'X-Requested-With': 'fetch' } });
+  } catch {
+    // Offline: the local session is still cleared below, which is what the user asked for.
   } finally {
     accessToken = null;
     emitSession(null);
@@ -183,6 +249,14 @@ export async function signOut() {
 
 /** Downloads an authenticated file (e.g. CSV export) and saves it. */
 export async function downloadFile(path, filename) {
+  try {
+    await download(path, filename);
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+async function download(path, filename) {
   let response = await rawFetch(path, {});
   if (response.status === 401 && accessToken) {
     await refreshSession();

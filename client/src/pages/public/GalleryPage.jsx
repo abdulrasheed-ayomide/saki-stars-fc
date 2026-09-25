@@ -48,7 +48,7 @@ export default function GalleryPage() {
             ))}
           </ul>
         </div>
-        <AsyncContent state={state} loading={<SkeletonGrid items={12} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" itemClass="aspect-square" />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Images} title="No photos yet" />}>
+        <AsyncContent state={state} context="gallery" loading={<SkeletonGrid items={12} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" itemClass="aspect-square" />} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Images} title="No photos yet" />}>
           {(d) => (
             <>
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">

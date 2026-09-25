@@ -48,7 +48,7 @@ export default function SearchPage() {
           {debounced.length < 2 ? (
             <p className="text-slate-600">Type at least two characters.</p>
           ) : state.error ? (
-            <ErrorState error={state.error} onRetry={state.reload} />
+            <ErrorState error={state.error} onRetry={state.reload} context="search" />
           ) : !d ? (
             <SkeletonList rows={3} />
           ) : total === 0 ? (

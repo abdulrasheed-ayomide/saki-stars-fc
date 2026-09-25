@@ -118,7 +118,7 @@ export default function ContactPage() {
             </div>
           ) : (
             <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4">
-              <FormError error={form.formError} />
+              <FormError error={form.formError} context="contact" />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Your name" required error={errors.name}>
                   <Input value={values.name} onChange={set('name')} autoComplete="name" maxLength={120} />

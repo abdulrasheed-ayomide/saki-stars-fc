@@ -44,7 +44,7 @@ export default function LoginPage() {
       }
     >
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <FormError error={form.formError} />
+        <FormError error={form.formError} context="login" />
         <Field label="Email address" error={errors.email} required>
           <Input type="email" value={values.email} onChange={set('email')} autoComplete="email" autoFocus />
         </Field>

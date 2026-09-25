@@ -6,6 +6,7 @@ import { useSeo } from '../../hooks/useDocumentTitle.js';
 import { StatusMessage } from '../../components/feedback/StatusMessage.jsx';
 import { PageSpinner } from '../../components/ui/Spinner.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /** Handles the links in newsletter emails: confirm (double opt-in) and unsubscribe. */
 export default function NewsletterPage({ action }) {
@@ -18,7 +19,7 @@ export default function NewsletterPage({ action }) {
     if (action !== 'confirm') return;
     apiRequest('/newsletter/confirm', { method: 'POST', body: { token }, withAuth: false })
       .then((d) => setState({ status: 'done', message: d.message, unsubscribeToken: d.unsubscribeToken }))
-      .catch((err) => setState({ status: 'error', message: err.message }));
+      .catch((err) => setState({ status: 'error', message: userMessage(err, 'newsletter') }));
   }, [action, token]);
 
   async function unsubscribe() {
@@ -27,7 +28,7 @@ export default function NewsletterPage({ action }) {
       const d = await apiRequest('/newsletter/unsubscribe', { method: 'POST', body: { token }, withAuth: false });
       setState({ status: 'done', message: d.message });
     } catch (err) {
-      setState({ status: 'error', message: err.message });
+      setState({ status: 'error', message: userMessage(err, 'newsletter') });
     }
   }
 

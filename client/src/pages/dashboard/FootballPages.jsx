@@ -23,6 +23,7 @@ import { TeamLogo } from '../../components/football/TeamLogo.jsx';
 import { StandingsTable } from '../../components/football/StandingsTable.jsx';
 import { formatDate, toDateInput } from '../../lib/format.js';
 import { FilterBar, useCompetitions, useSeasons, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 // ---------------------------------------------------------------------------------- Teams
 function TeamForm({ team, onClose, onSaved }) {
@@ -120,7 +121,7 @@ export function TeamsAdminPage() {
       notify('Team deleted.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setDel(null);
     }
@@ -187,7 +188,7 @@ export function SeasonsAdminPage() {
       notify('Season deleted.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setDel(null);
     }
@@ -409,7 +410,7 @@ export function CompetitionsAdminPage() {
       notify('Competition deleted.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setDel(null);
     }
@@ -464,7 +465,7 @@ export function StandingsAdminPage() {
       table.reload();
       adjustments.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setRevoke(null);
     }

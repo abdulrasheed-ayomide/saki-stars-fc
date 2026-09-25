@@ -21,6 +21,7 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import { STAFF_ROLE_LABELS, SCOPE_LABELS } from '../../lib/labels.js';
 import { toDateInput } from '../../lib/format.js';
 import { FilterBar, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 /**
  * Role + permissions + scope editor. The recommended permissions for each role are
@@ -49,7 +50,7 @@ export function AccessEditor({ value, onChange, disabled = false }) {
     }
   }, [cat, value, roleDefaults, onChange]);
 
-  if (catalogue.error) return <Alert tone="error">{catalogue.error.message}</Alert>;
+  if (catalogue.error) return <Alert tone="error">{userMessage(catalogue.error, 'dashboard')}</Alert>;
   if (!cat) return <p className="text-sm text-slate-600">Loading permissions…</p>;
 
   const grants = value.grants || [];
@@ -396,7 +397,7 @@ export function StaffDetailPage() {
       notify('Staff status updated.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(false);
       setStatusDialog(null);

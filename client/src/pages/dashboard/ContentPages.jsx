@@ -25,6 +25,7 @@ import { Markdown } from '../../lib/markdown.jsx';
 import { formatDate, formatDateTime, timeAgo, toDateInput } from '../../lib/format.js';
 import { imageUrl } from '../../lib/media.js';
 import { FilterBar, useCompetitions, useTeams } from './shared.jsx';
+import { userMessage } from '../../lib/errors.js';
 
 // ------------------------------------------------------------------------------------- News
 export function NewsListPage() {
@@ -127,7 +128,7 @@ function NewsEditor({ article, reload }) {
       notify({ submit: 'Sent for review.', withdraw: 'Moved back to drafts.', publish: 'Published on the website.', unpublish: 'Unpublished.', archive: 'Archived.' }[action]);
       reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy('');
       setConfirm(null);
@@ -140,7 +141,7 @@ function NewsEditor({ article, reload }) {
       notify('Article deleted.');
       navigate('/dashboard/news');
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
 
@@ -319,7 +320,7 @@ export function VideosAdminPage() {
     try {
       setEdit(await apiRequest(`/admin/videos/${v.id}`));
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     }
   }
   async function remove() {
@@ -328,7 +329,7 @@ export function VideosAdminPage() {
       notify('Video removed.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setDel(null);
     }
@@ -429,7 +430,7 @@ export function GalleryAdminPage() {
       notify('Photo removed.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setDel(null);
     }
@@ -484,7 +485,7 @@ export function CommentsAdminPage() {
       notify(s === 'approved' ? 'Comment approved.' : 'Comment removed from view.');
       state.reload();
     } catch (err) {
-      notify(err.message, 'error');
+      notify(userMessage(err, 'action'), 'error');
     } finally {
       setBusy(null);
     }
