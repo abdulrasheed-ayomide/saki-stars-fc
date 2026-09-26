@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicPlayerFilter } from '../players/players.routes.js';
 import { z } from 'zod';
 import { ClubSettings, Team, Player, Match } from '../../models/index.js';
 import { currentSeason } from '../football/seasons.routes.js';
@@ -54,7 +55,7 @@ export function createSettingsRouters({ auth, audit, config, media }) {
     const clubTeams = await Team.find({ isClubTeam: true, status: 'active' }).select('_id').lean();
     const ids = new Set(clubTeams.map((t) => String(t._id)));
     const [players, matches] = await Promise.all([
-      Player.countDocuments({ team: { $in: [...ids] }, deletedAt: null, showOnWebsite: true, status: { $in: ['active', 'injured', 'on_loan'] } }),
+      Player.countDocuments(await publicPlayerFilter()),
       season
         ? Match.find({ season: season._id, status: 'completed', deletedAt: null, $or: [{ homeTeam: { $in: [...ids] } }, { awayTeam: { $in: [...ids] } }] })
             .select('homeTeam awayTeam score')

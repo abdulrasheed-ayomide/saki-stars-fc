@@ -26,6 +26,7 @@ import { formatDate, formatDateTime, timeAgo, toDateInput } from '../../lib/form
 import { imageUrl } from '../../lib/media.js';
 import { FilterBar, useCompetitions, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
+import { VIDEO_CATEGORIES } from '../../config/categories.js';
 
 // ------------------------------------------------------------------------------------- News
 export function NewsListPage() {
@@ -63,8 +64,8 @@ export function NewsListPage() {
                 { key: 'title', label: 'Headline', render: (n) => <span className="font-medium">{n.title}</span> },
                 { key: 'cat', label: 'Category', render: (n) => n.category },
                 { key: 'author', label: 'Author', render: (n) => n.author.name },
-                { key: 'status', label: 'Status', render: (n) => <StatusBadge status={n.status} /> },
-                { key: 'date', label: 'Published', render: (n) => (n.publishedAt ? formatDate(n.publishedAt) : '–') },
+                { key: 'status', nowrap: true, label: 'Status', render: (n) => <StatusBadge status={n.status} /> },
+                { key: 'date', nowrap: true, label: 'Published', render: (n) => (n.publishedAt ? formatDate(n.publishedAt) : '–') },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={(p) => set('page', p)} className="mt-4" />
@@ -244,7 +245,6 @@ function NewsEditor({ article, reload }) {
 }
 
 // ------------------------------------------------------------------------------------- Videos
-const VIDEO_CATEGORIES = ['Match Highlights', 'Goals', 'Interviews', 'Training', 'Behind the Scenes', 'Press Conference', 'Youth', 'NEXT GEN', 'Club TV'];
 
 function VideoForm({ video, onClose, onSaved }) {
   const { notify } = useToast();

@@ -60,11 +60,11 @@ export function ReportsListPage() {
               onRowClick={(r) => navigate(`/dashboard/reports/${r.id}`)}
               columns={[
                 { key: 'title', label: 'Title', render: (r) => <span className="font-medium">{r.title}</span> },
-                { key: 'type', label: 'Type', render: (r) => titleCase(r.type) },
+                { key: 'type', nowrap: true, label: 'Type', render: (r) => titleCase(r.type) },
                 { key: 'author', label: 'By', render: (r) => `${r.authorName} (${r.authorRoleLabel})` },
-                { key: 'about', label: 'About', render: (r) => r.player?.name || r.team?.name || (r.match ? `${r.match.homeTeam?.name} v ${r.match.awayTeam?.name}` : '–') },
-                { key: 'date', label: 'Submitted', render: (r) => formatDate(r.createdAt) },
-                { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+                { key: 'about', truncate: true, label: 'About', render: (r) => r.player?.name || r.team?.name || (r.match ? `${r.match.homeTeam?.name} v ${r.match.awayTeam?.name}` : '–') },
+                { key: 'date', nowrap: true, label: 'Submitted', render: (r) => formatDate(r.createdAt) },
+                { key: 'status', nowrap: true, label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />
@@ -210,7 +210,7 @@ export function ScoutingPage() {
                   { key: 'rec', label: 'Recommendation', render: (r) => RECOMMENDATIONS.find(([k]) => k === r.recommendation)?.[1] },
                   { key: 'potential', label: 'Potential', render: (r) => r.ratings?.potential ?? '–' },
                   { key: 'scout', label: 'Scout', render: (r) => r.scoutName },
-                  { key: 'date', label: 'Date', render: (r) => formatDate(r.createdAt) },
+                  { key: 'date', nowrap: true, label: 'Date', render: (r) => formatDate(r.createdAt) },
                 ]}
               />
             )}
@@ -482,9 +482,9 @@ export function ContactAdminPage() {
               <>
                 <DataTable caption="Messages" rows={d.items} onRowClick={view} columns={[
                   { key: 'from', label: 'From', render: (m) => <span className={m.status === 'new' ? 'font-semibold' : ''}>{m.name}</span> },
-                  { key: 'subject', label: 'Subject', render: (m) => m.subject },
-                  { key: 'date', label: 'Received', render: (m) => timeAgo(m.createdAt) },
-                  { key: 'status', label: 'Status', render: (m) => <StatusBadge status={m.status} /> },
+                  { key: 'subject', truncate: true, label: 'Subject', render: (m) => m.subject },
+                  { key: 'date', nowrap: true, label: 'Received', render: (m) => timeAgo(m.createdAt) },
+                  { key: 'status', nowrap: true, label: 'Status', render: (m) => <StatusBadge status={m.status} /> },
                 ]} />
                 <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />
               </>
@@ -498,7 +498,7 @@ export function ContactAdminPage() {
           <AsyncContent state={subs} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Inbox} title="No confirmed subscribers yet" />}>
             {(d) => (
               <>
-                <DataTable caption="Subscribers" rows={d.items} columns={[{ key: 'email', label: 'Email' }, { key: 'date', label: 'Confirmed', render: (s) => formatDate(s.confirmedAt) }]} />
+                <DataTable caption="Subscribers" rows={d.items} columns={[{ key: 'email', truncate: true, label: 'Email' }, { key: 'date', nowrap: true, label: 'Confirmed', render: (s) => formatDate(s.confirmedAt) }]} />
                 <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />
               </>
             )}
@@ -547,11 +547,11 @@ export function AuditPage() {
         {(d) => (
           <>
             <DataTable caption="Audit log" rows={d.items} onRowClick={setOpen} columns={[
-              { key: 'time', label: 'When', render: (a) => formatDateTime(a.createdAt) },
+              { key: 'time', nowrap: true, label: 'When', render: (a) => formatDateTime(a.createdAt) },
               { key: 'actor', label: 'Who', render: (a) => a.actor ? a.actor.name || a.actor.email : 'System / anonymous' },
               { key: 'action', label: 'Action', render: (a) => <code className="text-xs">{a.action}</code> },
               { key: 'entity', label: 'Record', render: (a) => (a.entityType ? `${a.entityType}${a.entityId ? ` ${a.entityId.slice(-6)}` : ''}` : '–') },
-              { key: 'status', label: 'Result', render: (a) => <StatusBadge status={a.status} /> },
+              { key: 'status', nowrap: true, label: 'Result', render: (a) => <StatusBadge status={a.status} /> },
             ]} />
             <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />
           </>

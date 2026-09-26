@@ -229,9 +229,9 @@ export function StaffListPage() {
               { key: 'name', label: 'Name', render: (s) => <span className="font-medium">{s.fullName}</span> },
               { key: 'role', label: 'Role', render: (s) => s.roleLabel },
               { key: 'title', label: 'Title', render: (s) => s.title },
-              { key: 'login', label: 'Login', render: (s) => (s.user ? s.user.email || 'Yes' : <Badge>Profile only</Badge>) },
-              { key: 'web', label: 'On website', render: (s) => (s.showOnWebsite ? 'Yes' : 'No') },
-              { key: 'status', label: 'Status', render: (s) => <StatusBadge status={s.status} /> },
+              { key: 'login', nowrap: true, label: 'Login', render: (s) => (s.user ? s.user.email || 'Yes' : <Badge>Profile only</Badge>) },
+              { key: 'web', nowrap: true, label: 'On website', render: (s) => (s.showOnWebsite ? 'Yes' : 'No') },
+              { key: 'status', nowrap: true, label: 'Status', render: (s) => <StatusBadge status={s.status} /> },
             ]}
           />
         )}

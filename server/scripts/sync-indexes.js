@@ -3,7 +3,7 @@
  * starts; this also removes indexes the code no longer uses). Run after each deploy:
  *   npm run db:indexes
  * It also repairs data that later versions expect (currently: player URLs for players whose
- * surname is hidden must not contain the surname). Safe to run any number of times.
+ * surname is hidden must not contain the surname; renamed video categories). Safe to run any number of times.
  */
 import mongoose from 'mongoose';
 import { connectForScript } from './_db.js';
@@ -32,4 +32,7 @@ for await (const player of models.Player.find({ hideFullNamePublicly: true })) {
   }
 }
 if (fixed) console.log(`✔ updated ${fixed} player URL(s) that contained a hidden surname`);
+
+const renamed = await models.migrateLegacyVideoCategories();
+if (renamed) console.log(`✔ renamed the category of ${renamed} video(s) (e.g. Youth → Nigeria Youth League (NYL))`);
 await mongoose.disconnect();

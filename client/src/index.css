@@ -32,6 +32,23 @@
     min-width: 0;
   }
 
+  /*
+   * Tables must NOT inherit overflow-wrap:anywhere: in a table it lets the browser shrink a
+   * column to a single letter, which split words like "Oppon|ent" and "activ|e". Cells wrap
+   * only between words (break-word still breaks a single over-long token, e.g. an email, when
+   * there is no other way). Wide tables scroll inside their own box instead.
+   */
+  table {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  th,
+  td {
+    overflow-wrap: break-word;
+    hyphens: manual;
+  }
+
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
   }

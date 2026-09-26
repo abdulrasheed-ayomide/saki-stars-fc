@@ -85,12 +85,12 @@ export function PlayersListPage() {
               rows={d.items}
               onRowClick={(p) => navigate(`/dashboard/players/${p.id}`)}
               columns={[
-                { key: 'no', label: '#', render: (p) => p.jerseyNumber ?? '–', className: 'w-12' },
+                { key: 'no', nowrap: true, label: '#', render: (p) => p.jerseyNumber ?? '–', className: 'w-12' },
                 { key: 'name', label: 'Name', render: (p) => <span className="font-medium">{p.fullName}</span> },
-                { key: 'pos', label: 'Position', render: (p) => p.position },
+                { key: 'pos', nowrap: true, label: 'Position', render: (p) => p.position },
                 { key: 'team', label: 'Team', render: (p) => p.team?.name || '–' },
                 { key: 'flags', label: '', render: (p) => <span className="flex flex-wrap gap-1">{p.isMinor && <Badge tone="warning">U18</Badge>}{p.hasAccount && <Badge tone="brand">Portal</Badge>}{!p.showOnWebsite && <Badge>Hidden</Badge>}</span> },
-                { key: 'status', label: 'Status', render: (p) => <StatusBadge status={p.status} label={STATUSES.find(([k]) => k === p.status)?.[1]} /> },
+                { key: 'status', nowrap: true, label: 'Status', render: (p) => <StatusBadge status={p.status} label={STATUSES.find(([k]) => k === p.status)?.[1]} /> },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />

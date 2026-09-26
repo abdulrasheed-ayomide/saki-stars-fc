@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Activity, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -24,6 +24,7 @@ import { formatDateTime, fromLocalInput, toLocalInput } from '../../lib/format.j
 import { EVENT_LABELS, MATCH_STATUS_LABELS } from '../../lib/labels.js';
 import { FilterBar, useCompetitions, useSeasons, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
+import { defaultSeasonId, seasonLabel } from '../../lib/seasons.js';
 
 export function MatchesListPage() {
   useSeo({ title: 'Fixtures & results', noindex: true });
@@ -59,7 +60,7 @@ export function MatchesListPage() {
         <Field label="Season">
           <Select value={f.season} onChange={(e) => set('season', e.target.value)}>
             <option value="">All</option>
-            {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
           </Select>
         </Field>
         <Field label="Club team">
@@ -77,11 +78,11 @@ export function MatchesListPage() {
               rows={d.items}
               onRowClick={(m) => navigate(`/dashboard/matches/${m.id}`)}
               columns={[
-                { key: 'date', label: 'Kick-off', render: (m) => formatDateTime(m.kickoffAt, settings.timezone) },
+                { key: 'date', nowrap: true, label: 'Kick-off', render: (m) => formatDateTime(m.kickoffAt, settings.timezone) },
                 { key: 'match', label: 'Match', render: (m) => <span className="font-medium">{m.homeTeam?.name} v {m.awayTeam?.name}</span> },
                 { key: 'comp', label: 'Competition', render: (m) => m.competition?.shortName || m.competition?.name },
-                { key: 'score', label: 'Score', render: (m) => (m.score?.home != null ? `${m.score.home}–${m.score.away}` : '–') },
-                { key: 'status', label: 'Status', render: (m) => <span className="flex flex-wrap gap-1"><StatusBadge status={m.status} label={MATCH_STATUS_LABELS[m.status]} />{needsResult(m) && <Badge tone="warning">Result needed</Badge>}{m.reportPublished && <Badge tone="success">Report</Badge>}</span> },
+                { key: 'score', nowrap: true, label: 'Score', render: (m) => (m.score?.home != null ? `${m.score.home}–${m.score.away}` : '–') },
+                { key: 'status', nowrap: true, label: 'Status', render: (m) => <span className="flex flex-wrap gap-1"><StatusBadge status={m.status} label={MATCH_STATUS_LABELS[m.status]} />{needsResult(m) && <Badge tone="warning">Result needed</Badge>}{m.reportPublished && <Badge tone="success">Report</Badge>}</span> },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={(p) => set('page', p)} className="mt-4" />
@@ -184,6 +185,11 @@ function DetailsForm({ match, onSaved }) {
     status: match && ['scheduled', 'postponed', 'cancelled', 'live'].includes(match.status) ? match.status : 'scheduled',
     statusNote: match?.statusNote || '',
   });
+  // New fixtures default to the club's current season (still changeable in the dropdown).
+  const { setValues } = form;
+  useEffect(() => {
+    if (!match && seasons.length) setValues((f) => (f.season ? f : { ...f, season: defaultSeasonId(seasons) }));
+  }, [match, seasons, setValues]);
   const { values: v, set, errors: e } = form;
   const comp = competitions.find((c) => c.id === v.competition);
   const onSubmit = form.submit(async (values) => {
@@ -209,7 +215,7 @@ function DetailsForm({ match, onSaved }) {
           <Field label="Season" required error={e.season}>
             <Select value={v.season} onChange={set('season')}>
               <option value="">Choose…</option>
-              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
             </Select>
           </Field>
           <Field label="Home team" required error={e.homeTeam}>

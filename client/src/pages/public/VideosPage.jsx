@@ -10,8 +10,8 @@ import { Modal } from '../../components/ui/Modal.jsx';
 import { Pagination } from '../../components/ui/Pagination.jsx';
 import { VideoCard, VideoPlayer } from '../../components/content/VideoCard.jsx';
 import { formatDate } from '../../lib/format.js';
+import { VIDEO_CATEGORIES } from '../../config/categories.js';
 
-const CATEGORIES = ['Match Highlights', 'Goals', 'Interviews', 'Training', 'Behind the Scenes', 'Press Conference', 'Youth', 'NEXT GEN', 'Club TV'];
 
 export default function VideosPage() {
   useSeo({ title: 'Videos', description: 'Match highlights, goals, interviews and Club TV.' });
@@ -20,6 +20,7 @@ export default function VideosPage() {
   const page = Number(params.get('page') || 1);
   const state = useApi(`/videos${qs({ category, page, limit: 12 })}`);
   const [playing, setPlaying] = useState(null);
+  const categories = state.data?.categories || VIDEO_CATEGORIES;
 
   function update(key, value) {
     const next = new URLSearchParams(params);
@@ -35,7 +36,7 @@ export default function VideosPage() {
       <Container className="py-8">
         <div className="-mx-2 mb-6 relative overflow-x-auto px-2">
           <ul className="flex min-w-max gap-2" aria-label="Video categories">
-            {['', ...CATEGORIES].map((c) => (
+            {['', ...categories].map((c) => (
               <li key={c || 'all'}>
                 <button
                   type="button"

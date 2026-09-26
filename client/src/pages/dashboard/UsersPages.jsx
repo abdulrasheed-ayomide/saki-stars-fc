@@ -79,11 +79,11 @@ export function UsersListPage() {
               onRowClick={(u) => navigate(`/dashboard/users/${u.id}`)}
               columns={[
                 { key: 'name', label: 'Name', render: (u) => <span className="font-medium">{u.name}</span> },
-                { key: 'email', label: 'Email' },
+                { key: 'email', truncate: true, label: 'Email' },
                 { key: 'role', label: 'Type', render: (u) => ({ user: 'Supporter', player: 'Player', staff: 'Staff' })[u.role] },
-                { key: 'status', label: 'Status', render: (u) => <><StatusBadge status={u.status} label={USER_STATUS_LABELS[u.status]} /> {u.deletionRequestedAt && <Badge tone="danger">Deletion requested</Badge>}</> },
-                { key: 'last', label: 'Last sign-in', render: (u) => (u.lastLoginAt ? timeAgo(u.lastLoginAt) : 'Never') },
-                { key: 'created', label: 'Joined', render: (u) => formatDate(u.createdAt) },
+                { key: 'status', nowrap: true, label: 'Status', render: (u) => <><StatusBadge status={u.status} label={USER_STATUS_LABELS[u.status]} /> {u.deletionRequestedAt && <Badge tone="danger">Deletion requested</Badge>}</> },
+                { key: 'last', nowrap: true, label: 'Last sign-in', render: (u) => (u.lastLoginAt ? timeAgo(u.lastLoginAt) : 'Never') },
+                { key: 'created', nowrap: true, label: 'Joined', render: (u) => formatDate(u.createdAt) },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={(p) => set('page', p)} className="mt-4" />

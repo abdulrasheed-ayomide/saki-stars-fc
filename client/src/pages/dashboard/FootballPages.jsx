@@ -24,6 +24,7 @@ import { StandingsTable } from '../../components/football/StandingsTable.jsx';
 import { formatDate, toDateInput } from '../../lib/format.js';
 import { FilterBar, useCompetitions, useSeasons, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
+import { seasonLabel, seasonStatusLabel, suggestNewSeason } from '../../lib/seasons.js';
 
 // ---------------------------------------------------------------------------------- Teams
 function TeamForm({ team, onClose, onSaved }) {
@@ -69,7 +70,7 @@ function TeamForm({ team, onClose, onSaved }) {
               <Field label="Current season" error={e.season}>
                 <Select value={v.season} onChange={set('season')}>
                   <option value="">Use the club's current season</option>
-                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
                 </Select>
               </Field>
               <Field label="Display order" error={e.displayOrder}><Input type="number" value={v.displayOrder} onChange={set('displayOrder')} /></Field>
@@ -155,12 +156,12 @@ export function TeamsAdminPage() {
               rows={d.items}
               columns={[
                 { key: 'name', label: 'Team', render: (t) => <span className="flex items-center gap-2 font-medium"><TeamLogo team={t} size="sm" />{t.name}</span> },
-                { key: 'type', label: 'Type', render: (t) => (t.isClubTeam ? <Badge tone="brand">Club</Badge> : 'Opponent') },
-                { key: 'cat', label: 'Category', render: (t) => [t.category, t.ageGroup].filter(Boolean).join(' · ') || '–' },
-                { key: 'players', label: 'Players', render: (t) => t.playerCount },
+                { key: 'type', nowrap: true, label: 'Type', render: (t) => (t.isClubTeam ? <Badge tone="brand">Club</Badge> : 'Opponent') },
+                { key: 'cat', label: 'Category', minWidth: '10rem', render: (t) => [t.category, t.ageGroup].filter(Boolean).join(' · ') || '–' },
+                { key: 'players', nowrap: true, label: 'Players', render: (t) => t.playerCount },
                 { key: 'comps', label: 'Competitions', render: (t) => t.competitions.map((c) => c.shortName || c.name).join(', ') || '–' },
-                { key: 'status', label: 'Status', render: (t) => <StatusBadge status={t.status} /> },
-                { key: 'actions', label: <span className="sr-only">Actions</span>, render: (t) => <span className="flex gap-1"><IconButton label={`Edit ${t.name}`} icon={Pencil} onClick={() => setEdit(t)} /><IconButton label={`Delete ${t.name}`} icon={Trash2} onClick={() => setDel(t)} /></span> },
+                { key: 'status', nowrap: true, label: 'Status', render: (t) => <StatusBadge status={t.status} /> },
+                { key: 'actions', nowrap: true, label: <span className="sr-only">Actions</span>, render: (t) => <span className="flex gap-1"><IconButton label={`Edit ${t.name}`} icon={Pencil} onClick={() => setEdit(t)} /><IconButton label={`Delete ${t.name}`} icon={Trash2} onClick={() => setDel(t)} /></span> },
               ]}
             />
             <Pagination page={d.page} pages={d.pages} onChange={setPage} className="mt-4" />
@@ -202,16 +203,16 @@ export function SeasonsAdminPage() {
             caption="Seasons"
             rows={list}
             columns={[
-              { key: 'name', label: 'Season', render: (s) => <span className="font-medium">{s.name} {s.isCurrent && <Badge tone="success">Current</Badge>}</span> },
-              { key: 'dates', label: 'Dates', render: (s) => `${formatDate(s.startDate)} – ${formatDate(s.endDate)}` },
-              { key: 'matches', label: 'Matches', render: (s) => s.matchCount },
-              { key: 'status', label: 'Status', render: (s) => <StatusBadge status={s.status} /> },
-              { key: 'a', label: <span className="sr-only">Actions</span>, render: (s) => <span className="flex gap-1"><IconButton label={`Edit ${s.name}`} icon={Pencil} onClick={() => setEdit(s)} /><IconButton label={`Delete ${s.name}`} icon={Trash2} onClick={() => setDel(s)} /></span> },
+              { key: 'name', label: 'Season', render: (s) => <span className="inline-flex flex-wrap items-center gap-1.5 font-medium">{s.name} <Badge tone={s.isCurrent ? 'success' : 'neutral'}>{seasonStatusLabel(s, list)}</Badge></span> },
+              { key: 'dates', nowrap: true, label: 'Dates', render: (s) => `${formatDate(s.startDate)} – ${formatDate(s.endDate)}` },
+              { key: 'matches', nowrap: true, label: 'Matches', render: (s) => s.matchCount },
+              { key: 'status', nowrap: true, label: 'Status', render: (s) => <StatusBadge status={s.status} /> },
+              { key: 'a', nowrap: true, label: <span className="sr-only">Actions</span>, render: (s) => <span className="flex gap-1"><IconButton label={`Edit ${s.name}`} icon={Pencil} onClick={() => setEdit(s)} /><IconButton label={`Delete ${s.name}`} icon={Trash2} onClick={() => setDel(s)} /></span> },
             ]}
           />
         )}
       </AsyncContent>
-      {edit && <SeasonForm season={edit === 'new' ? null : edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); state.reload(); }} />}
+      {edit && <SeasonForm season={edit === 'new' ? null : edit} existing={state.data || []} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); state.reload(); }} />}
       <ConfirmDialog open={Boolean(del)} onClose={() => setDel(null)} onConfirm={remove} title={`Delete season ${del?.name}?`} confirmLabel="Delete">
         Seasons with matches cannot be deleted. Archive them instead.
       </ConfirmDialog>
@@ -219,14 +220,15 @@ export function SeasonsAdminPage() {
   );
 }
 
-function SeasonForm({ season, onClose, onSaved }) {
+function SeasonForm({ season, existing = [], onClose, onSaved }) {
   const { notify } = useToast();
-  const y = new Date().getFullYear();
+  const next = suggestNewSeason(existing);
   const form = useForm({
-    name: season?.name || `${y}/${String(y + 1).slice(2)}`,
-    startDate: toDateInput(season?.startDate) || `${y}-08-01`,
-    endDate: toDateInput(season?.endDate) || `${y + 1}-06-30`,
-    isCurrent: season ? season.isCurrent : true,
+    name: season?.name || next.name,
+    startDate: toDateInput(season?.startDate) || next.startDate,
+    endDate: toDateInput(season?.endDate) || next.endDate,
+    // A brand-new season only becomes current automatically when it is the club's first one.
+    isCurrent: season ? season.isCurrent : existing.length === 0,
     status: season?.status || 'active',
   });
   const { values: v, set, errors: e } = form;
@@ -239,7 +241,7 @@ function SeasonForm({ season, onClose, onSaved }) {
     <Modal open onClose={onClose} title={season ? `Edit ${season.name}` : 'Add season'} size="sm" footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={onSubmit} loading={form.submitting}>Save</Button></>}>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError error={form.formError} />
-        <Field label="Name" required error={e.name} hint="e.g. 2026/27"><Input value={v.name} onChange={set('name')} maxLength={40} /></Field>
+        <Field label="Season (year)" required error={e.name} hint="Usually the year, e.g. 2026. Use 2026/27 if a season crosses two years."><Input value={v.name} onChange={set('name')} maxLength={40} /></Field>
         <div className="grid gap-4 xs:grid-cols-2">
           <Field label="Starts" required error={e.startDate}><Input type="date" value={v.startDate} onChange={set('startDate')} /></Field>
           <Field label="Ends" required error={e.endDate}><Input type="date" value={v.endDate} onChange={set('endDate')} /></Field>
@@ -253,6 +255,7 @@ function SeasonForm({ season, onClose, onSaved }) {
           </Select>
         </Field>
         <Checkbox checked={v.isCurrent} onChange={set('isCurrent')} label="This is the current season" />
+        <p className="text-xs text-slate-600">Making this season current does not change any other season’s fixtures, results or tables; they stay filed under their own season.</p>
       </form>
     </Modal>
   );
@@ -308,6 +311,12 @@ function CompetitionForm({ competition, onClose, onSaved }) {
     onSaved();
   });
   const toggle = (key, id, on) => set(key)(on ? [...v[key], id] : v[key].filter((x) => x !== id));
+  const clubCurrent = seasons.find((s) => s.isCurrent);
+  // Choosing a competition's current season also links that season to the competition.
+  const chooseCurrent = (ev) => {
+    const id = ev.target.value;
+    form.setValues((f) => ({ ...f, currentSeason: id, seasons: id && !f.seasons.includes(id) ? [...f.seasons, id] : f.seasons }));
+  };
   const moveTb = (i, d) => {
     const list = [...v.rules.tieBreakers];
     const j = i + d;
@@ -374,13 +383,18 @@ function CompetitionForm({ competition, onClose, onSaved }) {
             <legend className="text-sm font-medium">Seasons</legend>
             <ul className="mt-1 space-y-1">
               {seasons.map((s) => (
-                <li key={s.id}><Checkbox label={s.name} checked={v.seasons.includes(s.id)} onChange={(ev) => toggle('seasons', s.id, ev.target.checked)} /></li>
+                <li key={s.id}><Checkbox label={seasonLabel(s, seasons)} checked={v.seasons.includes(s.id)} onChange={(ev) => toggle('seasons', s.id, ev.target.checked)} /></li>
               ))}
             </ul>
-            <Field label="Current season" className="mt-2">
-              <Select value={v.currentSeason} onChange={set('currentSeason')}>
-                <option value="">Club's current season</option>
-                {seasons.filter((s) => v.seasons.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {!seasons.length && (
+              <p className="mt-1 text-sm text-slate-600">
+                No seasons yet. Add one (for example 2026) on the <Link to="/dashboard/seasons" className="font-medium text-brand-700 underline">Seasons</Link> page.
+              </p>
+            )}
+            <Field label="Current season" className="mt-2" hint="Which season this competition’s table and fixtures show by default. Past seasons stay available.">
+              <Select value={v.currentSeason} onChange={chooseCurrent}>
+                <option value="">Follow the club’s current season{clubCurrent ? ` (${clubCurrent.name})` : ''}</option>
+                {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
               </Select>
             </Field>
           </fieldset>
@@ -425,12 +439,12 @@ export function CompetitionsAdminPage() {
             rows={list}
             columns={[
               { key: 'name', label: 'Competition', render: (c) => <span className="font-medium">{c.name}</span> },
-              { key: 'type', label: 'Type', render: (c) => ({ league: 'League', cup: 'Cup', friendly: 'Friendlies' })[c.type] },
-              { key: 'rules', label: 'Points', render: (c) => (c.type === 'friendly' ? '–' : `${c.rules.pointsWin}/${c.rules.pointsDraw}/${c.rules.pointsLoss}`) },
-              { key: 'season', label: 'Current season', render: (c) => c.currentSeason?.name || '–' },
-              { key: 'teams', label: 'Teams', render: (c) => c.teams.length },
-              { key: 'status', label: 'Status', render: (c) => <StatusBadge status={c.status} /> },
-              { key: 'a', label: <span className="sr-only">Actions</span>, render: (c) => <span className="flex gap-1"><IconButton label={`Edit ${c.name}`} icon={Pencil} onClick={() => setEdit(c)} /><IconButton label={`Delete ${c.name}`} icon={Trash2} onClick={() => setDel(c)} /></span> },
+              { key: 'type', nowrap: true, label: 'Type', render: (c) => ({ league: 'League', cup: 'Cup', friendly: 'Friendlies' })[c.type] },
+              { key: 'rules', nowrap: true, label: 'Points', render: (c) => (c.type === 'friendly' ? '–' : `${c.rules.pointsWin}/${c.rules.pointsDraw}/${c.rules.pointsLoss}`) },
+              { key: 'season', nowrap: true, label: 'Current season', render: (c) => c.currentSeason?.name || '–' },
+              { key: 'teams', nowrap: true, label: 'Teams', render: (c) => c.teams.length },
+              { key: 'status', nowrap: true, label: 'Status', render: (c) => <StatusBadge status={c.status} /> },
+              { key: 'a', nowrap: true, label: <span className="sr-only">Actions</span>, render: (c) => <span className="flex gap-1"><IconButton label={`Edit ${c.name}`} icon={Pencil} onClick={() => setEdit(c)} /><IconButton label={`Delete ${c.name}`} icon={Trash2} onClick={() => setDel(c)} /></span> },
             ]}
           />
         )}
@@ -487,7 +501,7 @@ export function StandingsAdminPage() {
             <Field label="Season">
               <Select value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
                 <option value="">Current</option>
-                {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
               </Select>
             </Field>
           </FilterBar>
@@ -542,7 +556,7 @@ function AdjustmentForm({ competition, seasons, onClose, onSaved }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Season" required error={e.season}>
             <Select value={v.season} onChange={set('season')}>
-              {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {seasons.map((s) => <option key={s.id} value={s.id}>{seasonLabel(s, seasons)}</option>)}
             </Select>
           </Field>
           <Field label="Team" required error={e.team}>

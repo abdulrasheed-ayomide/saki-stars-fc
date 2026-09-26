@@ -47,16 +47,16 @@ export default function ApplicationsPage() {
           { key: 'name', label: 'Applicant', render: (a) => <span className="font-medium">{a.firstName} {a.lastName}</span> },
           { key: 'position', label: 'Position' },
           { key: 'team', label: 'Team wanted', render: (a) => a.preferredTeam?.name || '–' },
-          { key: 'minor', label: 'Age group', render: (a) => (a.isMinor ? <Badge tone="warning">Under 18</Badge> : 'Adult') },
-          { key: 'date', label: 'Received', render: (a) => formatDate(a.createdAt) },
-          { key: 'status', label: 'Status', render: (a) => <StatusBadge status={a.status} /> },
+          { key: 'minor', nowrap: true, label: 'Age group', render: (a) => (a.isMinor ? <Badge tone="warning">Under 18</Badge> : 'Adult') },
+          { key: 'date', nowrap: true, label: 'Received', render: (a) => formatDate(a.createdAt) },
+          { key: 'status', nowrap: true, label: 'Status', render: (a) => <StatusBadge status={a.status} /> },
         ]
       : [
           { key: 'name', label: 'Applicant', render: (a) => <span className="font-medium">{a.fullName}</span> },
           { key: 'role', label: 'Role requested', render: (a) => a.requestedRoleLabel },
-          { key: 'email', label: 'Email', render: (a) => a.user?.email },
-          { key: 'date', label: 'Received', render: (a) => formatDate(a.createdAt) },
-          { key: 'status', label: 'Status', render: (a) => <StatusBadge status={a.status} /> },
+          { key: 'email', truncate: true, label: 'Email', render: (a) => a.user?.email },
+          { key: 'date', nowrap: true, label: 'Received', render: (a) => formatDate(a.createdAt) },
+          { key: 'status', nowrap: true, label: 'Status', render: (a) => <StatusBadge status={a.status} /> },
         ];
 
   return (

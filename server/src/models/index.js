@@ -18,5 +18,7 @@ export {
   VIDEO_CATEGORIES,
   GALLERY_CATEGORIES,
   COMMENT_STATUSES,
+  LEGACY_VIDEO_CATEGORIES,
+  migrateLegacyVideoCategories,
 } from './Content.js';
 export { Report, ScoutingAssignment, ScoutingReport, AuditLog, ClubSettings, REPORT_TYPES, REPORT_STATUSES } from './Operations.js';

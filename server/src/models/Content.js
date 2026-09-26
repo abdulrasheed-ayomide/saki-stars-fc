@@ -45,16 +45,28 @@ export const VIDEO_CATEGORIES = [
   'Training',
   'Behind the Scenes',
   'Press Conference',
-  'Youth',
+  'Nigeria Nationwide League One (NLO)',
+  'Nigeria Youth League (NYL)',
   'NEXT GEN',
   'Club TV',
 ];
+
+/**
+ * Old category names that were renamed. Existing videos keep working: values are translated
+ * on save, in API filters and in responses, and `npm run db:indexes` / server start-up rewrite
+ * them in the database once (see migrateLegacyVideoCategories).
+ */
+export const LEGACY_VIDEO_CATEGORIES = { Youth: 'Nigeria Youth League (NYL)' };
+
+export function normalizeVideoCategory(value) {
+  return LEGACY_VIDEO_CATEGORIES[value] || value;
+}
 
 const videoSchema = new Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, maxlength: 3000, default: '' },
-    category: { type: String, enum: VIDEO_CATEGORIES, required: true },
+    category: { type: String, enum: VIDEO_CATEGORIES, required: true, set: normalizeVideoCategory },
     source: { type: String, enum: ['youtube', 'cloudinary'], required: true },
     youtubeId: { type: String, maxlength: 20, default: '' },
     media: { type: mediaSchema, default: null },
@@ -198,3 +210,13 @@ export const Announcement = mongoose.models.Announcement || mongoose.model('Anno
 export const ContactMessage = mongoose.models.ContactMessage || mongoose.model('ContactMessage', contactMessageSchema);
 export const NewsletterSubscriber =
   mongoose.models.NewsletterSubscriber || mongoose.model('NewsletterSubscriber', newsletterSubscriberSchema);
+
+/** Renames legacy video categories in the database. Idempotent; returns how many videos changed. */
+export async function migrateLegacyVideoCategories() {
+  let changed = 0;
+  for (const [from, to] of Object.entries(LEGACY_VIDEO_CATEGORIES)) {
+    const res = await Video.collection.updateMany({ category: from }, { $set: { category: to } });
+    changed += res.modifiedCount || 0;
+  }
+  return changed;
+}

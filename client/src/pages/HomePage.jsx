@@ -60,7 +60,16 @@ function Hero() {
 
       <Container className="py-14 sm:py-20 lg:py-24">
         <div className="flex max-w-3xl flex-col gap-4">
-          {settings.logo?.url && <img src={imageUrl(settings.logo.url, { width: 160, height: 160, crop: 'pad' })} alt="" className="size-16 object-contain sm:size-20" />}
+          {settings.logo?.url && (
+            <img
+              src={imageUrl(settings.logo.url, { width: 160, height: 160, crop: 'pad' })}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.hidden = true;
+              }}
+              className="size-16 object-contain sm:size-20"
+            />
+          )}
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-200 xs:text-sm">{settings.heroHeadline ? settings.name : 'Official website'}</p>
           <h1 id="hero-title" className="text-[clamp(1.75rem,8vw,3.75rem)] font-bold leading-[1.1]">
             {settings.heroHeadline || settings.name}

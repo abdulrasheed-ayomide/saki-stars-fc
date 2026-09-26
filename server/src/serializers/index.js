@@ -4,6 +4,7 @@
  */
 import { STAFF_ROLES } from '../auth/permissions.js';
 import { idString } from '../utils/ids.js';
+import { normalizeVideoCategory } from '../models/Content.js';
 
 export function publicMedia(m) {
   if (!m || !m.url || m.deliveryType === 'private' || m.deliveryType === 'authenticated') return null;
@@ -391,7 +392,7 @@ export function publicVideo(v) {
     id: idString(v._id),
     title: v.title,
     description: v.description || '',
-    category: v.category,
+    category: normalizeVideoCategory(v.category),
     source: v.source,
     youtubeId: v.source === 'youtube' ? v.youtubeId : null,
     media: v.source === 'cloudinary' ? publicMedia(v.media) : null,

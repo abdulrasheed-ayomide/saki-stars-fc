@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Video, GalleryItem, Match, Team } from '../../models/index.js';
-import { VIDEO_CATEGORIES, GALLERY_CATEGORIES } from '../../models/Content.js';
+import { VIDEO_CATEGORIES, GALLERY_CATEGORIES, normalizeVideoCategory } from '../../models/Content.js';
+
+// Accepts renamed categories in links/filters made before the rename (e.g. ?category=Youth).
+const videoCategoryQuery = z.preprocess(normalizeVideoCategory, z.enum(VIDEO_CATEGORIES));
 import { validate } from '../../middleware/validate.js';
 import { idParams, objectId, mediaInput, pagingQuery } from '../../validation/common.js';
 import { AppError } from '../../utils/AppError.js';
@@ -78,7 +81,7 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
   // ---- Videos -------------------------------------------------------------------------
   videosPub.get(
     '/',
-    validate({ query: z.object({ category: z.enum(VIDEO_CATEGORIES).optional(), team: objectId.optional(), q: z.string().max(100).optional(), featured: z.enum(['true']).optional(), ...pagingQuery }) }),
+    validate({ query: z.object({ category: videoCategoryQuery.optional(), team: objectId.optional(), q: z.string().max(100).optional(), featured: z.enum(['true']).optional(), ...pagingQuery }) }),
     async (req, res) => {
       const { category, team, q, featured } = req.valid.query;
       const filter = { status: 'published', deletedAt: null };
@@ -103,7 +106,7 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     .object({
       title: z.string().trim().min(3).max(200),
       description: z.string().trim().max(3000).optional().default(''),
-      category: z.enum(VIDEO_CATEGORIES),
+      category: videoCategoryQuery,
       source: z.enum(['youtube', 'cloudinary']),
       youtubeUrl: z.string().trim().max(300).optional().default(''),
       media: mediaInput(config),
@@ -140,7 +143,7 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     if (body.match && !(await Match.exists({ _id: body.match }))) throw AppError.validation([{ path: 'match', message: 'Match not found.' }]);
   }
 
-  videosAdmin.get('/', validate({ query: z.object({ status: z.enum(['draft', 'published', 'archived']).optional(), category: z.enum(VIDEO_CATEGORIES).optional(), q: z.string().max(100).optional(), ...pagingQuery }) }), async (req, res) => {
+  videosAdmin.get('/', validate({ query: z.object({ status: z.enum(['draft', 'published', 'archived']).optional(), category: videoCategoryQuery.optional(), q: z.string().max(100).optional(), ...pagingQuery }) }), async (req, res) => {
     const { status, category, q } = req.valid.query;
     const filter = { deletedAt: null };
     if (status) filter.status = status;

@@ -17,6 +17,22 @@ import { currentSeason } from '../football/seasons.routes.js';
 const TEAM_POP = { path: 'team', select: 'name shortName slug logo isClubTeam' };
 const PUBLIC_FILTER = { showOnWebsite: true, deletedAt: null, status: { $in: ['active', 'injured', 'on_loan'] } };
 
+/**
+ * The ONE rule for "this player is on the public website", used by the list AND the profile
+ * so they can never disagree. A player is public when marked showOnWebsite, not deleted, in an
+ * active-type status, and either not yet assigned to a team or on a club team that is not
+ * archived. (Previously the list also required an *active club team*, so players saved without
+ * a team opened by link but never appeared on /players.)
+ */
+export async function publicPlayerFilter({ team } = {}) {
+  const clubTeams = (await Team.find({ isClubTeam: true, status: { $ne: 'archived' } }).select('_id').lean()).map((t) => String(t._id));
+  let teamRule;
+  if (!team) teamRule = { $or: [{ team: null }, { team: { $in: clubTeams } }] };
+  else if (clubTeams.includes(String(team))) teamRule = { team };
+  else teamRule = { _id: null }; // an opponent or archived team: no public players
+  return { $and: [PUBLIC_FILTER, teamRule] };
+}
+
 export function createPlayerRouters({ auth, audit, config, media, upload, limiters }) {
   const pub = Router();
   const admin = Router();
@@ -27,14 +43,13 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
     validate({ query: z.object({ team: objectId.optional(), position: z.enum(POSITIONS).optional(), q: z.string().max(100).optional(), featured: z.enum(['true']).optional(), ...pagingQuery }) }),
     async (req, res) => {
       const { team, position, q, featured } = req.valid.query;
-      const clubTeams = (await Team.find({ isClubTeam: true, status: 'active' }).select('_id').lean()).map((t) => t._id);
-      const filter = { ...PUBLIC_FILTER, team: team ? team : { $in: clubTeams } };
-      if (position) filter.position = position;
-      if (featured) filter.featured = true;
+      const filter = await publicPlayerFilter({ team });
+      if (position) filter.$and.push({ position });
+      if (featured) filter.$and.push({ featured: true });
       if (q) {
         const rx = containsRegex(q);
         // Hidden full names of minors are not searchable by surname.
-        filter.$or = [{ firstName: rx }, { knownAs: rx }, { lastName: rx, hideFullNamePublicly: { $ne: true } }];
+        filter.$and.push({ $or: [{ firstName: rx }, { knownAs: rx }, { lastName: rx, hideFullNamePublicly: { $ne: true } }] });
       }
       const paging = getPaging(req.valid.query, { defaultLimit: 48, maxLimit: 100 });
       const result = await findPaged(Player, filter, paging, (qq) => qq.sort({ jerseyNumber: 1, lastName: 1 }).populate(TEAM_POP));
@@ -43,7 +58,9 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
   );
 
   pub.get('/:id', async (req, res) => {
-    const player = await Player.findOne({ ...idOrSlugFilter(req.params.id), ...PUBLIC_FILTER }).populate(TEAM_POP).lean();
+    const filter = await publicPlayerFilter();
+    filter.$and.push(idOrSlugFilter(req.params.id));
+    const player = await Player.findOne(filter).populate(TEAM_POP).lean();
     if (!player) throw AppError.notFound('Player not found.');
     const season = await currentSeason();
     const [career, seasonStats, recent] = await Promise.all([

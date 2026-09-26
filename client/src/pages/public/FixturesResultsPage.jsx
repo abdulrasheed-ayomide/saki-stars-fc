@@ -12,6 +12,7 @@ import { Tabs } from '../../components/ui/Tabs.jsx';
 import { Pagination } from '../../components/ui/Pagination.jsx';
 import { MatchRow } from '../../components/football/MatchCard.jsx';
 import { formatMonthYear } from '../../lib/format.js';
+import { seasonLabel } from '../../lib/seasons.js';
 
 /** Fixtures and results with filters. Every filter option comes from the database. */
 export default function FixturesResultsPage() {
@@ -86,7 +87,7 @@ export default function FixturesResultsPage() {
               <option value="">All seasons</option>
               {(seasons.data || []).map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name}
+                  {seasonLabel(s, seasons.data)}
                 </option>
               ))}
             </Select>

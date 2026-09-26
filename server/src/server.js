@@ -3,6 +3,7 @@ import { createLogger } from './utils/logger.js';
 import { createApp } from './app.js';
 import { connectDatabase, disconnectDatabase } from './db/connection.js';
 import { ensureDirectorFromEnv } from './auth/bootstrapDirector.js';
+import { migrateLegacyVideoCategories } from './models/Content.js';
 
 let config;
 try {
@@ -36,6 +37,13 @@ connectDatabase({ uri: config.mongodbUri, logger })
       });
     } catch (err) {
       logger.error('Could not create the Club Director from the environment', { reason: err.message });
+    }
+    // Small, idempotent data repairs for renamed values (safe on every start).
+    try {
+      const renamed = await migrateLegacyVideoCategories();
+      if (renamed) logger.info('Updated renamed video categories', { videos: renamed });
+    } catch (err) {
+      logger.error('Could not update renamed video categories', { reason: err.message });
     }
   })
   .catch((err) => {

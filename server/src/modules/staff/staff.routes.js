@@ -210,7 +210,8 @@ export function createStaffRouters({ auth, audit, config, media, tokens, notific
           doc.set(fields);
           await doc.save({ session });
         } else {
-          [doc] = await Staff.create([{ ...fields, user: user._id, showOnWebsite: false }], { session });
+          // Same default as approving a staff application: senior roles are public, others private.
+          [doc] = await Staff.create([{ ...fields, user: user._id, showOnWebsite: STAFF_ROLES[body.staffRole].publicByDefault }], { session });
         }
         await User.updateOne({ _id: user._id }, { $set: { role: 'staff', staff: doc._id } }, { session });
         return doc;

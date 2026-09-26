@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicPlayerFilter } from './players/players.routes.js';
 import { News, Player, Team, Competition, Match } from '../models/index.js';
 
 function xmlEscape(value) {
@@ -13,7 +14,7 @@ export function createSitemapRouter({ config }) {
     const staticPaths = ['/', '/club', '/teams', '/players', '/fixtures-results', '/competitions', '/news', '/videos', '/gallery', '/staff', '/contact', '/privacy', '/terms', '/cookie-policy'];
     const [news, players, teams, comps, matches] = await Promise.all([
       News.find({ status: 'published', deletedAt: null }).select('slug updatedAt').sort({ publishedAt: -1 }).limit(2000).lean(),
-      Player.find({ showOnWebsite: true, deletedAt: null, status: { $in: ['active', 'injured', 'on_loan'] } }).select('slug updatedAt').limit(2000).lean(),
+      Player.find(await publicPlayerFilter()).select('slug updatedAt').limit(2000).lean(),
       Team.find({ isClubTeam: true, status: 'active' }).select('slug updatedAt').lean(),
       Competition.find({ status: 'active' }).select('slug updatedAt').lean(),
       Match.find({ deletedAt: null }).select('_id updatedAt').sort({ kickoffAt: -1 }).limit(1000).lean(),

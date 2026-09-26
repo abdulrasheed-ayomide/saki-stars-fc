@@ -14,6 +14,7 @@ import { TeamLogo, CompetitionLogo } from '../../components/football/TeamLogo.js
 import { NewsCard } from '../../components/content/NewsCard.jsx';
 import { Markdown } from '../../lib/markdown.jsx';
 import NotFoundPage from '../NotFoundPage.jsx';
+import { seasonLabel } from '../../lib/seasons.js';
 
 const TIE_BREAK_LABELS = { points: 'points', goal_difference: 'goal difference', goals_for: 'goals scored', head_to_head: 'head-to-head', wins: 'wins', name: 'name' };
 
@@ -75,14 +76,14 @@ export default function CompetitionDetailPage() {
             ]}
           />
           {c.seasons.length > 1 && tab !== 'news' && (
-            <Field label="Season" className="w-44">
+            <Field label="Season" className="w-full sm:w-52">
               <Select value={season} onChange={(e) => setSeason(e.target.value)}>
-                <option value="">{c.currentSeason ? `${c.currentSeason.name} (current)` : 'Current season'}</option>
+                <option value="">{c.currentSeason ? `${c.currentSeason.name} — Current` : 'Current season'}</option>
                 {c.seasons
                   .filter((s) => s.id !== c.currentSeason?.id)
                   .map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name}
+                      {seasonLabel({ ...s, isCurrent: false }, [c.currentSeason, ...c.seasons].filter(Boolean).map((x) => ({ ...x, isCurrent: x.id === c.currentSeason?.id })))}
                     </option>
                   ))}
               </Select>

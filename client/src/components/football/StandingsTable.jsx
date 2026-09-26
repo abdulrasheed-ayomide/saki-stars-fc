@@ -22,12 +22,12 @@ export function StandingsTable({ rows, compact = false, highlightClub = true }) 
     <div className="relative overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <table className={`w-full border-collapse text-sm ${compact ? 'min-w-[22rem]' : 'min-w-[40rem]'}`}>
         <caption className="sr-only">League table</caption>
-        <thead className="bg-brand-900 text-xs uppercase tracking-wide text-white">
+        <thead className="whitespace-nowrap bg-brand-900 text-xs uppercase tracking-wide text-white">
           <tr>
             <th scope="col" className="w-12 whitespace-nowrap px-2 py-2 text-center" title="Position">
               Pos
             </th>
-            <th scope="col" className="px-2 py-2 text-left">
+            <th scope="col" className="min-w-[11rem] px-2 py-2 text-left">
               Team
             </th>
             <th scope="col" className="px-2 py-2 text-center" title="Played">P</th>
@@ -54,21 +54,23 @@ export function StandingsTable({ rows, compact = false, highlightClub = true }) 
             <tr key={r.team.id} className={highlightClub && r.team.isClubTeam ? 'bg-brand-50 font-semibold' : ''}>
               <td className="px-2 py-2 text-center tabular-nums">{r.position}</td>
               <th scope="row" className="px-2 py-2 text-left font-medium">
-                <span className="flex min-w-0 items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2 leading-snug">
                   <TeamLogo team={r.team} size="sm" />
-                  {r.team.isClubTeam ? (
-                    <Link to={`/teams/${r.team.slug}`} className="block min-w-0 truncate py-2.5 hover:underline">
-                      {r.team.name}
-                    </Link>
-                  ) : (
-                    <span className="min-w-0 truncate">{r.team.name}</span>
-                  )}
-                  {r.adjustment && (
-                    <span className="shrink-0 text-xs font-normal text-amber-700" title={r.adjustment.reasons.join('; ')}>
-                      ({r.adjustment.points > 0 ? '+' : ''}
-                      {r.adjustment.points} pts)*
-                    </span>
-                  )}
+                  <span className="min-w-0">
+                    {r.team.isClubTeam ? (
+                      <Link to={`/teams/${r.team.slug}`} className="block py-2 hover:underline">
+                        {r.team.name}
+                      </Link>
+                    ) : (
+                      <span className="block">{r.team.name}</span>
+                    )}
+                    {r.adjustment && (
+                      <span className="block whitespace-nowrap text-xs font-normal text-amber-700" title={r.adjustment.reasons.join('; ')}>
+                        {r.adjustment.points > 0 ? '+' : ''}
+                        {r.adjustment.points} pts adjustment*
+                      </span>
+                    )}
+                  </span>
                 </span>
               </th>
               <td className="px-2 py-2 text-center tabular-nums">{r.played}</td>
@@ -84,7 +86,7 @@ export function StandingsTable({ rows, compact = false, highlightClub = true }) 
               <td className="px-2 py-2 text-center tabular-nums">{r.goalDifference > 0 ? `+${r.goalDifference}` : r.goalDifference}</td>
               <td className="px-2 py-2 text-center font-bold tabular-nums">{r.points}</td>
               {!compact && (
-                <td className="px-2 py-2">
+                <td className="whitespace-nowrap px-2 py-2">
                   <FormGuide form={r.form} />
                 </td>
               )}

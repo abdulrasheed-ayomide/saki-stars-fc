@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicPlayerFilter } from '../players/players.routes.js';
 import { z } from 'zod';
 import { Player, Team, News, Competition, Match, Video, User } from '../../models/index.js';
 import { validate } from '../../middleware/validate.js';
@@ -19,15 +20,10 @@ export function createSearchRouters({ auth, limiters }) {
 
   pub.get('/', limiters.search, validate({ query: querySchema }), async (req, res) => {
     const rx = containsRegex(req.valid.query.q);
-    const clubTeams = await Team.find({ isClubTeam: true, status: 'active' }).select('_id').lean();
     const teamIdsMatching = (await Team.find({ name: rx }).select('_id').lean()).map((t) => t._id);
     const [players, teams, news, competitions, matches, videos] = await Promise.all([
       Player.find({
-        showOnWebsite: true,
-        deletedAt: null,
-        status: { $in: ['active', 'injured', 'on_loan'] },
-        team: { $in: clubTeams.map((t) => t._id) },
-        $or: [{ firstName: rx }, { knownAs: rx }, { lastName: rx, hideFullNamePublicly: { $ne: true } }],
+        $and: [...(await publicPlayerFilter()).$and, { $or: [{ firstName: rx }, { knownAs: rx }, { lastName: rx, hideFullNamePublicly: { $ne: true } }] }],
       })
         .limit(8)
         .populate('team', 'name shortName slug logo isClubTeam')
