@@ -201,3 +201,12 @@ describe('uploads, sessions and crashes', () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 });
+
+describe('reference codes', () => {
+  it('error panels and forms do not show the technical request reference', async () => {
+    vi.stubGlobal('fetch', fakeApi({ '^GET /news$': serverError, '^POST /auth/login$': serverError }));
+    renderRoute('/news');
+    expect(await screen.findByText('News could not be loaded')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Reference|req-1/);
+  });
+});

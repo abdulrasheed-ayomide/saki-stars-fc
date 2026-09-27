@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Newspaper } from 'lucide-react';
 import { imageUrl, srcSet } from '../../lib/media.js';
@@ -6,7 +7,9 @@ import { useSettings } from '../../app/SettingsProvider.jsx';
 
 export function NewsCard({ article, featured = false }) {
   const { settings } = useSettings();
-  const img = article.featuredImage?.url;
+  const [failed, setFailed] = useState(null);
+  // A missing or broken image (e.g. an external link that was removed) shows the placeholder.
+  const img = article.featuredImage?.url && article.featuredImage.url !== failed ? article.featuredImage.url : null;
   return (
     <Link to={`/news/${article.slug}`} className={`group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm hover:border-brand-300 hover:shadow ${featured ? 'md:flex-row' : ''}`}>
       <div className={`relative bg-brand-100 ${featured ? 'aspect-video md:aspect-auto md:w-3/5' : 'aspect-video'}`}>
@@ -17,6 +20,7 @@ export function NewsCard({ article, featured = false }) {
             sizes={featured ? '(min-width: 768px) 60vw, 100vw' : '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'}
             alt={article.featuredImage.alt || ''}
             loading="lazy"
+            onError={() => setFailed(img)}
             className="absolute inset-0 size-full object-cover"
           />
         ) : (

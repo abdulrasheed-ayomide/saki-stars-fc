@@ -11,6 +11,7 @@ import { getPaging, findPaged } from '../../utils/pagination.js';
 import { newsSummary, publicNews, adminNews } from '../../serializers/index.js';
 import { has } from '../../auth/access.js';
 import { MATCH_POPULATE } from '../football/teams.routes.js';
+import { parseYouTubeId } from '../media/media.routes.js';
 
 const LIST_POP = [
   { path: 'author', select: 'name' },
@@ -22,6 +23,16 @@ const FULL_POP = [
   { path: 'relatedMatches', populate: MATCH_POPULATE },
   { path: 'relatedPlayers', select: 'firstName lastName knownAs slug jerseyNumber hideFullNamePublicly showOnWebsite deletedAt' },
 ];
+
+/** An https link to an image on another website. Only ever used as <img src>; never fetched by the server. */
+export function isSafeImageUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && Boolean(url.hostname.includes('.')) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Workflow: draft -> review -> published -> archived.
@@ -75,6 +86,22 @@ export function createNewsRouters({ auth, audit, config, notifications }) {
     excerpt: z.string().trim().max(400).optional().default(''),
     content: z.string().trim().min(20, 'The article is too short.').max(50000),
     featuredImage: mediaInput(config),
+    // Optional media hosted elsewhere (nothing is downloaded or re-uploaded).
+    externalImageUrl: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional()
+      .default('')
+      .refine((v) => !v || isSafeImageUrl(v), 'Paste a full image link starting with https://'),
+    externalImageAlt: z.string().trim().max(300).optional().default(''),
+    videoUrl: z
+      .string()
+      .trim()
+      .max(300)
+      .optional()
+      .default('')
+      .refine((v) => !v || Boolean(parseYouTubeId(v)), 'Paste a valid YouTube link, e.g. https://www.youtube.com/watch?v=…'),
     category: z.enum(NEWS_CATEGORIES).optional().default('Club News'),
     competition: objectId.nullable().optional(),
     team: objectId.nullable().optional(),
@@ -82,7 +109,12 @@ export function createNewsRouters({ auth, audit, config, notifications }) {
     relatedPlayers: z.array(objectId).max(30).optional().default([]),
     allowComments: z.boolean().optional().default(true),
     slug: z.string().trim().toLowerCase().regex(/^[a-z0-9-]*$/, 'Use lowercase letters, numbers and dashes.').max(120).optional(),
-  });
+  }).transform(({ externalImageUrl, externalImageAlt, videoUrl, ...rest }) => ({
+    ...rest,
+    // Stored as references only: the image link, and the YouTube video ID (never iframe HTML).
+    externalImage: externalImageUrl ? { url: externalImageUrl, alt: externalImageAlt } : null,
+    video: videoUrl ? { provider: 'youtube', id: parseYouTubeId(videoUrl) } : null,
+  }));
 
   async function checkRefs(body) {
     const problems = [];

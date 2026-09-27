@@ -46,7 +46,7 @@ describe('public routes', () => {
     renderRoute('/');
     expect(await screen.findByRole('heading', { level: 1, name: /saki stars sports club/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /view fixtures/i })).toHaveAttribute('href', '/fixtures-results');
-    expect(screen.getByRole('link', { name: /meet the team/i })).toHaveAttribute('href', '/teams');
+    expect(screen.getByRole('link', { name: /meet the players/i })).toHaveAttribute('href', '/players');
   });
 
   it('uses the headline saved in settings when there is one', async () => {

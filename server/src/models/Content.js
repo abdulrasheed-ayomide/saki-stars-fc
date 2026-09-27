@@ -14,6 +14,15 @@ const newsSchema = new Schema(
     excerpt: { type: String, trim: true, maxlength: 400, default: '' },
     content: { type: String, required: true, maxlength: 50000 },
     featuredImage: { type: mediaSchema, default: null },
+    // Media hosted elsewhere: only the checked link / video ID is stored, never the file.
+    externalImage: {
+      type: new Schema({ url: { type: String, maxlength: 1000, required: true }, alt: { type: String, maxlength: 300, default: '' } }, { _id: false }),
+      default: null,
+    },
+    video: {
+      type: new Schema({ provider: { type: String, enum: ['youtube'], required: true }, id: { type: String, maxlength: 20, required: true } }, { _id: false }),
+      default: null,
+    },
     category: { type: String, enum: NEWS_CATEGORIES, default: 'Club News' },
     competition: { type: Schema.Types.ObjectId, ref: 'Competition', default: null },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },

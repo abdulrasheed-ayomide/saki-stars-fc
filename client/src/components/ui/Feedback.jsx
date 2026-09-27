@@ -48,7 +48,6 @@ export function ErrorState({ error, onRetry, title, context = 'default', classNa
       <AlertTriangle aria-hidden="true" className="mx-auto size-8" />
       <p className="mt-2 font-semibold">{title || errorTitle(context)}</p>
       <p className="mx-auto mt-1 max-w-md text-sm">{body}</p>
-      {error?.requestId && <p className="mt-1 text-xs text-red-700">Reference: {error.requestId}</p>}
       {retry && (
         <Button variant="outline" size="sm" icon={RefreshCw} onClick={onRetry} className="mt-4">
           Try again

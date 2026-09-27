@@ -354,7 +354,8 @@ export function newsSummary(n) {
     title: n.title,
     slug: n.slug,
     excerpt: n.excerpt || String(n.content || '').replace(/[#*_>`-]/g, '').slice(0, 220),
-    featuredImage: publicMedia(n.featuredImage),
+    // An uploaded (Cloudinary) image wins; otherwise the external image link, in the same shape.
+    featuredImage: publicMedia(n.featuredImage) || externalImage(n.externalImage),
     category: n.category,
     competition: competitionSummary(n.competition),
     team: teamSummary(n.team),
@@ -363,10 +364,17 @@ export function newsSummary(n) {
   };
 }
 
+function externalImage(e) {
+  if (!e || !e.url) return null;
+  return { publicId: null, url: e.url, width: null, height: null, alt: e.alt || '', resourceType: 'image', format: null, duration: null, external: true };
+}
+
 export function publicNews(n) {
   return {
     ...newsSummary(n),
     content: n.content,
+    // Only the provider and video ID; the website builds the player itself.
+    video: n.video && n.video.provider === 'youtube' && n.video.id ? { provider: 'youtube', id: n.video.id } : null,
     relatedMatches: (n.relatedMatches || []).filter((m) => m && m._id && !m.deletedAt).map(matchSummary),
     relatedPlayers: (n.relatedPlayers || []).filter((p) => p && p._id && p.showOnWebsite !== false && !p.deletedAt).map(playerLink),
     allowComments: n.allowComments !== false,
@@ -381,6 +389,11 @@ export function adminNews(n) {
     submittedAt: n.submittedAt || null,
     archivedAt: n.archivedAt || null,
     authorId: idString(n.author?._id ?? n.author),
+    // The edit form needs the uploaded image and the external link separately.
+    featuredImage: publicMedia(n.featuredImage),
+    externalImageUrl: n.externalImage?.url || '',
+    externalImageAlt: n.externalImage?.alt || '',
+    videoUrl: n.video?.provider === 'youtube' && n.video.id ? `https://www.youtube.com/watch?v=${n.video.id}` : '',
     relatedMatches: (n.relatedMatches || []).map((m) => (m && m._id ? matchSummary(m) : { id: idString(m) })),
     relatedPlayers: (n.relatedPlayers || []).map((p) => (p && p._id ? playerLink(p) : { id: idString(p) })),
     createdAt: n.createdAt,

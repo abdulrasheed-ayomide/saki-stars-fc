@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useApi } from '../../hooks/useApi.js';
 import { useSeo } from '../../hooks/useDocumentTitle.js';
@@ -6,6 +7,7 @@ import { Container } from '../../components/layout/Container.jsx';
 import { Breadcrumbs } from '../../components/ui/PageHeader.jsx';
 import { ErrorState, SkeletonList } from '../../components/ui/Feedback.jsx';
 import { NewsCard } from '../../components/content/NewsCard.jsx';
+import { YouTubeEmbed } from '../../components/content/VideoCard.jsx';
 import { MatchRow } from '../../components/football/MatchCard.jsx';
 import { Comments } from '../../components/content/Comments.jsx';
 import { Markdown } from '../../lib/markdown.jsx';
@@ -18,6 +20,8 @@ export default function NewsArticlePage() {
   const { settings } = useSettings();
   const state = useApi(`/news/${encodeURIComponent(slug)}`);
   const a = state.data;
+  // An image link on another website may disappear; hide it rather than show a broken image.
+  const [failedImage, setFailedImage] = useState(null);
   useSeo({ title: a?.title || 'News', description: a?.excerpt, image: a?.featuredImage?.url, type: 'article' });
 
   if (state.error?.status === 404) return <NotFoundPage />;
@@ -50,9 +54,10 @@ export default function NewsArticlePage() {
             </>
           )}
         </p>
-        {a.featuredImage && (
+        {a.featuredImage && failedImage !== a.featuredImage.url && (
           <figure className="mt-6">
             <img
+              onError={() => setFailedImage(a.featuredImage.url)}
               src={imageUrl(a.featuredImage.url, { width: 1200, height: 675 })}
               srcSet={srcSet(a.featuredImage.url, [640, 960, 1200, 1600], { aspect: 16 / 9 })}
               sizes="(min-width: 896px) 896px, 100vw"
@@ -61,6 +66,11 @@ export default function NewsArticlePage() {
             />
             {a.featuredImage.alt && <figcaption className="mt-1 text-xs text-slate-500">{a.featuredImage.alt}</figcaption>}
           </figure>
+        )}
+        {a.video?.provider === 'youtube' && (
+          <div className="mt-6">
+            <YouTubeEmbed videoId={a.video.id} title={a.title} />
+          </div>
         )}
         <Markdown text={a.content} className="mt-6" />
 

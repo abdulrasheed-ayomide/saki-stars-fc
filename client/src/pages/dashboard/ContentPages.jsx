@@ -105,6 +105,9 @@ function NewsEditor({ article, reload }) {
     excerpt: article?.excerpt || '',
     content: article?.content || '',
     featuredImage: article?.featuredImage || null,
+    externalImageUrl: article?.externalImageUrl || '',
+    externalImageAlt: article?.externalImageAlt || '',
+    videoUrl: article?.videoUrl || '',
     category: article?.category || 'Club News',
     competition: article?.competition?.id || '',
     team: article?.team?.id || '',
@@ -200,6 +203,21 @@ function NewsEditor({ article, reload }) {
         <fieldset disabled={!editable} className="min-w-0 space-y-4">
           <Card className="space-y-4 p-4">
             <MediaUpload label="Featured image" folder="news" value={v.featuredImage} onChange={set('featuredImage')} />
+            <Field
+              label="Or: image link"
+              error={e.externalImageUrl}
+              hint={v.featuredImage ? 'Not used while an image is uploaded above.' : 'A picture already online (https://…). Nothing is copied to the club’s storage.'}
+            >
+              <Input type="url" inputMode="url" value={v.externalImageUrl} onChange={set('externalImageUrl')} placeholder="https://" maxLength={1000} />
+            </Field>
+            {v.externalImageUrl && !v.featuredImage && (
+              <Field label="Image description" error={e.externalImageAlt} hint="What the picture shows, for screen readers.">
+                <Input value={v.externalImageAlt} onChange={set('externalImageAlt')} maxLength={300} />
+              </Field>
+            )}
+            <Field label="YouTube video (optional)" error={e.videoUrl} hint="Paste the YouTube link. It plays inside the article; the video stays on YouTube.">
+              <Input type="url" inputMode="url" value={v.videoUrl} onChange={set('videoUrl')} placeholder="https://www.youtube.com/watch?v=…" maxLength={300} />
+            </Field>
             <Field label="Category" error={e.category}>
               <Select value={v.category} onChange={set('category')}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select>
             </Field>

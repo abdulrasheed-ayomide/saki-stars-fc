@@ -1,4 +1,5 @@
-import { PlayCircle } from 'lucide-react';
+import { useState } from 'react';
+import { PlayCircle, VideoOff } from 'lucide-react';
 import { imageUrl } from '../../lib/media.js';
 
 export function videoThumb(video) {
@@ -50,4 +51,57 @@ export function VideoPlayer({ video }) {
     );
   }
   return <p className="text-sm text-slate-600">This video is not available.</p>;
+}
+
+/**
+ * YouTube video from a stored video ID only (never stored iframe HTML). Shows the thumbnail
+ * first and loads the privacy-enhanced player when tapped. If YouTube no longer has the video
+ * (removed, private, account closed), its thumbnail is missing or is YouTube's 120px
+ * placeholder, and a plain "Video temporarily unavailable." is shown instead of provider errors.
+ */
+export function YouTubeEmbed({ videoId, title = 'Video' }) {
+  const [state, setState] = useState('ready'); // ready | playing | unavailable
+  const id = /^[A-Za-z0-9_-]{11}$/.test(videoId || '') ? videoId : null;
+
+  if (!id || state === 'unavailable') {
+    return (
+      <div role="status" className="grid aspect-video place-items-center rounded-lg bg-slate-100 px-4 text-center text-slate-600">
+        <span>
+          <VideoOff aria-hidden="true" className="mx-auto size-8 text-slate-400" />
+          <span className="mt-2 block text-sm font-medium">Video temporarily unavailable.</span>
+        </span>
+      </div>
+    );
+  }
+  if (state === 'playing') {
+    return (
+      <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+        <iframe
+          className="absolute inset-0 size-full"
+          src={`https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&autoplay=1`}
+          title={title}
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+    );
+  }
+  return (
+    <button type="button" onClick={() => setState('playing')} className="group relative block aspect-video w-full overflow-hidden rounded-lg bg-brand-950" aria-label={`Play video: ${title}`}>
+      <img
+        src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`}
+        alt=""
+        loading="lazy"
+        className="absolute inset-0 size-full object-cover opacity-90"
+        onError={() => setState('unavailable')}
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth === 120) setState('unavailable');
+        }}
+      />
+      <span className="absolute inset-0 grid place-items-center">
+        <PlayCircle aria-hidden="true" className="size-16 text-white drop-shadow-lg transition group-hover:scale-105" />
+      </span>
+    </button>
+  );
 }

@@ -11,7 +11,6 @@ export function FormError({ error, context = 'save' }) {
   return (
     <Alert tone="error" className="mb-4">
       {message}
-      {error.requestId && error.code !== 'VALIDATION_ERROR' && <span className="block text-xs opacity-80">Reference: {error.requestId}</span>}
     </Alert>
   );
 }

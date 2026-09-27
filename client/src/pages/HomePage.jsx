@@ -79,8 +79,8 @@ function Hero() {
             <ButtonLink to="/fixtures-results" variant="light" size="lg" icon={CalendarDays}>
               View Fixtures
             </ButtonLink>
-            <ButtonLink to="/teams" variant="outline-light" size="lg" icon={Users}>
-              Meet the Team
+            <ButtonLink to="/players" variant="outline-light" size="lg" icon={Users}>
+              Meet the Players
             </ButtonLink>
           </div>
         </div>

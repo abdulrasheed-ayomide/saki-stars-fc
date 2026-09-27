@@ -140,7 +140,8 @@ async function toResult(response) {
       serverMessage: error.code ? error.message : undefined,
       requestId: error.requestId,
       details: Array.isArray(error.details) ? error.details : undefined,
-      developerMessage: `HTTP ${response.status} ${error.code || ''} ${error.message || ''}`.trim(),
+      // The request ID matches the server log line for this failure; kept for developers, not shown on the page.
+      developerMessage: `HTTP ${response.status} ${error.code || ''} ${error.message || ''}${error.requestId ? ` (request ${error.requestId})` : ''}`.trim(),
     });
     logError(apiError, response.url);
     throw apiError;
