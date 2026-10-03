@@ -2,10 +2,21 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-/** Reference to a file stored in Cloudinary. The binary never lives in MongoDB. */
+/**
+ * Reference to a media file. The binary never lives in MongoDB.
+ *   source "cloudinary" (default; all records saved before links existed): uploaded to Cloudinary.
+ *   source "link": an image on another website; only its https URL is stored.
+ */
 export const mediaSchema = new Schema(
   {
-    publicId: { type: String, required: true, maxlength: 300 },
+    source: { type: String, enum: ['cloudinary', 'link'], default: 'cloudinary' },
+    publicId: {
+      type: String,
+      maxlength: 300,
+      required() {
+        return this.source !== 'link';
+      },
+    },
     url: { type: String, required: true, maxlength: 1000 },
     resourceType: { type: String, enum: ['image', 'video', 'raw'], default: 'image' },
     deliveryType: { type: String, enum: ['upload', 'private', 'authenticated'], default: 'upload' },

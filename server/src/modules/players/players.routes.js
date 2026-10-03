@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Player, Team, Match, User, ScoutingReport } from '../../models/index.js';
+import { Player, Team, Match, User, ScoutingReport, Video, GalleryItem } from '../../models/index.js';
 import { POSITIONS, PLAYER_STATUSES } from '../../models/Player.js';
 import { validate } from '../../middleware/validate.js';
 import { idParams, objectId, mediaInput, pagingQuery } from '../../validation/common.js';
@@ -8,13 +8,15 @@ import { AppError } from '../../utils/AppError.js';
 import { containsRegex, ageOn } from '../../utils/text.js';
 import { idOrSlugFilter, idString } from '../../utils/ids.js';
 import { getPaging, findPaged } from '../../utils/pagination.js';
-import { publicPlayer, staffPlayer, matchSummary } from '../../serializers/index.js';
+import { publicPlayer, staffPlayer, matchSummary, publicGalleryItem, publicVideo, adminGalleryItem, adminVideo } from '../../serializers/index.js';
 import { playerStats, withAdjustments } from '../../services/stats.service.js';
-import { canAccessPlayer, assertAccess, playerScopeFilter, scopeOf } from '../../auth/access.js';
+import { canAccessPlayer, assertAccess, playerScopeFilter, scopeOf, has } from '../../auth/access.js';
 import { MATCH_POPULATE } from '../football/teams.routes.js';
 import { currentSeason } from '../football/seasons.routes.js';
 
 const TEAM_POP = { path: 'team', select: 'name shortName slug logo isClubTeam' };
+const PROFILE_PHOTOS = 12;
+const PROFILE_VIDEOS = 8;
 const PUBLIC_FILTER = { showOnWebsite: true, deletedAt: null, status: { $in: ['active', 'injured', 'on_loan'] } };
 
 /**
@@ -76,9 +78,18 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
         .populate(MATCH_POPULATE)
         .lean(),
     ]);
+    // Published photos/videos tagged with this player. Photos are left out when the club hides
+    // this player's photo publicly (minors by default). Small limits keep the profile light.
+    const [photos, videos] = await Promise.all([
+      player.hidePhotoPublicly
+        ? []
+        : GalleryItem.find({ players: player._id, status: 'published', deletedAt: null }).sort({ takenAt: -1, createdAt: -1 }).limit(PROFILE_PHOTOS).lean(),
+      Video.find({ players: player._id, status: 'published', deletedAt: null }).sort({ publishedAt: -1, createdAt: -1 }).limit(PROFILE_VIDEOS).lean(),
+    ]);
     res.json({
       data: {
         ...publicPlayer(player),
+        media: { photos: photos.map(publicGalleryItem), videos: videos.map(publicVideo) },
         stats: {
           career: withAdjustments(career.get(idString(player._id)), player),
           season: seasonStats ? { season: { id: idString(season._id), name: season.name }, ...seasonStats.get(idString(player._id)) } : null,
@@ -156,6 +167,71 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
       const paging = getPaging(req.valid.query, { defaultLimit: 50 });
       const result = await findPaged(Player, filter, paging, (qq) => qq.sort({ lastName: 1, firstName: 1 }).populate(TEAM_POP));
       res.json({ data: { ...result, items: result.items.map((p) => staffPlayer(p)) } });
+    },
+  );
+
+  // Minimal list for the "players in this photo/video" picker (media staff may not have players.view).
+  admin.get('/options', auth.requirePermission('media.manage', 'players.view', 'players.edit'), async (req, res) => {
+    const filter = { deletedAt: null };
+    if (!has(req.auth, 'media.manage')) Object.assign(filter, playerScopeFilter(req.auth, scopeOf(req.auth, 'players.view') ? 'players.view' : 'players.edit'));
+    const list = await Player.find(filter).select('firstName lastName jerseyNumber team').sort({ lastName: 1, firstName: 1 }).limit(1000).populate('team', 'name').lean();
+    res.json({ data: list.map((p) => ({ id: idString(p._id), name: [p.firstName, p.lastName].filter(Boolean).join(' '), jerseyNumber: p.jerseyNumber ?? null, team: p.team?.name || '' })) });
+  });
+
+  async function loadPlayerForMedia(req) {
+    const player = await Player.findOne({ _id: req.valid.params.id, deletedAt: null }).select('team hidePhotoPublicly').lean();
+    if (!player) throw AppError.notFound('Player not found.');
+    if (!has(req.auth, 'media.manage')) assertAccess(canAccessPlayer(req.auth, 'players.view', player) || canAccessPlayer(req.auth, 'players.edit', player));
+    return player;
+  }
+
+  // Photos and videos tagged with a player, any status (staff view).
+  admin.get('/:id/media', auth.requirePermission('media.manage', 'players.view', 'players.edit'), validate({ params: idParams }), async (req, res) => {
+    const player = await loadPlayerForMedia(req);
+    const [photos, videos] = await Promise.all([
+      GalleryItem.find({ players: player._id, deletedAt: null }).sort({ createdAt: -1 }).limit(200).lean(),
+      Video.find({ players: player._id, deletedAt: null }).sort({ createdAt: -1 }).limit(200).lean(),
+    ]);
+    res.json({ data: { photos: photos.map(adminGalleryItem), videos: videos.map(adminVideo), canManage: has(req.auth, 'media.manage'), photosHiddenPublicly: Boolean(player.hidePhotoPublicly) } });
+  });
+
+  // Tags an EXISTING photo or video with this player (from the player's page). Only the player's ID
+  // is added to that item; no media is created or copied. Same permission as tagging in the
+  // Gallery/Video forms (media.manage).
+  admin.post(
+    '/:id/media/:kind/:itemId',
+    auth.requirePermission('media.manage'),
+    validate({ params: z.object({ id: objectId, kind: z.enum(['photo', 'video']), itemId: objectId }) }),
+    async (req, res) => {
+      const { id, kind, itemId } = req.valid.params;
+      const player = await loadPlayerForMedia(req);
+      const Model = kind === 'photo' ? GalleryItem : Video;
+      const item = await Model.findOne({ _id: itemId, deletedAt: null }).select('players').lean();
+      if (!item) throw AppError.notFound(kind === 'photo' ? 'Photo not found.' : 'Video not found.');
+      if ((item.players || []).some((p) => idString(p) === id)) {
+        return res.json({ data: { id: itemId, alreadyTagged: true } });
+      }
+      // The 30-player limit matches the Gallery/Video forms; checked in the same update so two
+      // staff attaching at once cannot go over it.
+      const result = await Model.updateOne({ _id: itemId, deletedAt: null, 'players.29': { $exists: false } }, { $addToSet: { players: player._id } });
+      if (!result.matchedCount) throw AppError.conflict('This item already features the maximum of 30 players.');
+      await audit(req, { action: 'player.media_tagged', entityType: kind === 'photo' ? 'GalleryItem' : 'Video', entityId: itemId, metadata: { player: id } });
+      res.json({ data: { id: itemId, alreadyTagged: false } });
+    },
+  );
+
+  // Removes ONE player's tag from a photo or video. The media item itself is never deleted here.
+  admin.delete(
+    '/:id/media/:kind/:itemId',
+    auth.requirePermission('media.manage'),
+    validate({ params: z.object({ id: objectId, kind: z.enum(['photo', 'video']), itemId: objectId }) }),
+    async (req, res) => {
+      const { id, kind, itemId } = req.valid.params;
+      const Model = kind === 'photo' ? GalleryItem : Video;
+      const result = await Model.updateOne({ _id: itemId, deletedAt: null, players: id }, { $pull: { players: id } });
+      if (!result.matchedCount) throw AppError.notFound('This player is not tagged in that item.');
+      await audit(req, { action: 'player.media_untagged', entityType: kind === 'photo' ? 'GalleryItem' : 'Video', entityId: itemId, metadata: { player: id } });
+      res.json({ data: { id: itemId } });
     },
   );
 

@@ -9,8 +9,9 @@ import { normalizeVideoCategory } from '../models/Content.js';
 export function publicMedia(m) {
   if (!m || !m.url || m.deliveryType === 'private' || m.deliveryType === 'authenticated') return null;
   return {
+    source: m.source === 'link' ? 'link' : 'cloudinary',
     // The public ID is part of the delivery URL anyway; it is not a secret.
-    publicId: m.publicId,
+    publicId: m.source === 'link' ? null : m.publicId,
     url: m.url,
     width: m.width ?? null,
     height: m.height ?? null,
@@ -389,8 +390,9 @@ export function adminNews(n) {
     submittedAt: n.submittedAt || null,
     archivedAt: n.archivedAt || null,
     authorId: idString(n.author?._id ?? n.author),
-    // The edit form needs the uploaded image and the external link separately.
-    featuredImage: publicMedia(n.featuredImage),
+    // The edit form shows the featured image as an upload or a link. Articles saved with the
+    // older separate link field (externalImage) are presented as a link so they can be edited.
+    featuredImage: publicMedia(n.featuredImage) || (n.externalImage?.url ? { source: 'link', publicId: null, url: n.externalImage.url, alt: n.externalImage.alt || '', resourceType: 'image', width: null, height: null, format: null, duration: null } : null),
     externalImageUrl: n.externalImage?.url || '',
     externalImageAlt: n.externalImage?.alt || '',
     videoUrl: n.video?.provider === 'youtube' && n.video.id ? `https://www.youtube.com/watch?v=${n.video.id}` : '',
@@ -417,8 +419,13 @@ export function publicVideo(v) {
   };
 }
 
+/** Staff view of the players tagged in a media item (ids, plus names when populated). Never public. */
+function taggedPlayers(list) {
+  return (list || []).filter(Boolean).map((p) => (p._id ? { id: idString(p._id), name: [p.firstName, p.lastName].filter(Boolean).join(' '), slug: p.slug } : { id: idString(p) }));
+}
+
 export function adminVideo(v) {
-  return { ...publicVideo(v), status: v.status, createdAt: v.createdAt, matchId: idString(v.match?._id ?? v.match), teamId: idString(v.team?._id ?? v.team) };
+  return { ...publicVideo(v), status: v.status, createdAt: v.createdAt, matchId: idString(v.match?._id ?? v.match), teamId: idString(v.team?._id ?? v.team), players: taggedPlayers(v.players) };
 }
 
 export function publicGalleryItem(g) {
@@ -437,7 +444,7 @@ export function publicGalleryItem(g) {
 }
 
 export function adminGalleryItem(g) {
-  return { ...publicGalleryItem(g), status: g.status, teamId: idString(g.team?._id ?? g.team), matchId: idString(g.match?._id ?? g.match) };
+  return { ...publicGalleryItem(g), status: g.status, teamId: idString(g.team?._id ?? g.team), matchId: idString(g.match?._id ?? g.match), players: taggedPlayers(g.players) };
 }
 
 export function publicComment(c, viewerId) {

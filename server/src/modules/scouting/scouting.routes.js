@@ -198,7 +198,7 @@ export function createScoutingRouter({ auth, audit, config, media, notifications
     weaknesses: z.string().trim().max(3000).optional().default(''),
     ratings: z.object({ technical: rating, tactical: rating, physical: rating, mental: rating, potential: rating }).prefault({}),
     recommendation: z.enum(['sign', 'monitor', 'trial', 'reject', 'undecided']).optional().default('undecided'),
-    attachments: z.array(mediaInput(config)).max(10).optional().default([]),
+    attachments: z.array(mediaInput(config, { allowLink: false })).max(10).optional().default([]),
     status: z.enum(['draft', 'submitted']).optional().default('submitted'),
   });
 

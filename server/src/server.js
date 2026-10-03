@@ -19,37 +19,54 @@ for (const warning of config.warnings) logger.warn(warning);
 const app = createApp({ config, logger });
 
 // Render (and most hosts) provide PORT; locally it defaults to 4000.
-const server = app.listen(config.port, () => {
-  logger.info('API listening', { port: config.port, env: config.nodeEnv });
+// Express 5 hands listen errors (such as "port already in use") to this callback instead of
+// throwing. Without checking, the API would log "listening", connect to MongoDB and look healthy
+// while a different program answers on the port. Stop with a clear message instead, and only
+// connect to the database once this process is really serving requests.
+const server = app.listen(config.port, (err) => {
+  if (err) {
+    const reason =
+      err.code === 'EADDRINUSE'
+        ? `Port ${config.port} is already in use by another program, so the API did not start. ` +
+          'Close the other program (often an older copy of this API still running in another terminal) and start again, ' +
+          'or set a different PORT in server/.env and the same address in VITE_DEV_API_TARGET in client/.env.local.'
+        : `The API could not start on port ${config.port} (${err.code || err.message}).`;
+    logger.error(reason);
+    process.exit(1);
+  }
+  logger.info('API listening', { port: config.port, env: config.nodeEnv, health: `/api/v1/health` });
+  startDatabase();
 });
 
-connectDatabase({ uri: config.mongodbUri, logger })
-  .then(async () => {
-    // First-run admin: creates the Club Director from DIRECTOR_EMAIL / DIRECTOR_PASSWORD
-    // only while no Director exists. The password is read here, never stored in config.
-    try {
-      await ensureDirectorFromEnv({
-        email: process.env.DIRECTOR_EMAIL,
-        name: process.env.DIRECTOR_NAME,
-        password: process.env.DIRECTOR_PASSWORD,
-        rounds: config.auth.bcryptRounds,
-        logger,
-      });
-    } catch (err) {
-      logger.error('Could not create the Club Director from the environment', { reason: err.message });
-    }
-    // Small, idempotent data repairs for renamed values (safe on every start).
-    try {
-      const renamed = await migrateLegacyVideoCategories();
-      if (renamed) logger.info('Updated renamed video categories', { videos: renamed });
-    } catch (err) {
-      logger.error('Could not update renamed video categories', { reason: err.message });
-    }
-  })
-  .catch((err) => {
-    logger.error('Could not connect to MongoDB; shutting down', { reason: err.message });
-    process.exit(1);
-  });
+function startDatabase() {
+  connectDatabase({ uri: config.mongodbUri, logger })
+    .then(async () => {
+      // First-run admin: creates the Club Director from DIRECTOR_EMAIL / DIRECTOR_PASSWORD
+      // only while no Director exists. The password is read here, never stored in config.
+      try {
+        await ensureDirectorFromEnv({
+          email: process.env.DIRECTOR_EMAIL,
+          name: process.env.DIRECTOR_NAME,
+          password: process.env.DIRECTOR_PASSWORD,
+          rounds: config.auth.bcryptRounds,
+          logger,
+        });
+      } catch (err) {
+        logger.error('Could not create the Club Director from the environment', { reason: err.message });
+      }
+      // Small, idempotent data repairs for renamed values (safe on every start).
+      try {
+        const renamed = await migrateLegacyVideoCategories();
+        if (renamed) logger.info('Updated renamed video categories', { videos: renamed });
+      } catch (err) {
+        logger.error('Could not update renamed video categories', { reason: err.message });
+      }
+    })
+    .catch((err) => {
+      logger.error('Could not connect to MongoDB; shutting down', { reason: err.message });
+      process.exit(1);
+    });
+}
 
 let shuttingDown = false;
 async function shutdown(signal) {

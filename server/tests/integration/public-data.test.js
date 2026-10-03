@@ -19,7 +19,7 @@ describeDb('public data flow: players, staff, seasons, video categories', () => 
     pub = api(ctx);
     ids.club = (await admin.post('/admin/teams').send({ name: 'Saki Stars First Team', isClubTeam: true })).body.data.id;
     ids.archived = (await admin.post('/admin/teams').send({ name: 'Old Reserves', isClubTeam: true })).body.data.id;
-    ids.opponent = (await admin.post('/admin/teams').send({ name: 'Rivers United' })).body.data.id;
+    ids.opponent = (await admin.post('/admin/teams').send({ name: 'Rivers United', isClubTeam: false })).body.data.id;
   });
 
   async function createPlayer(body) {

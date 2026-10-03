@@ -173,6 +173,7 @@ describe('uploads, sessions and crashes', () => {
         <MediaUpload value={null} onChange={() => {}} folder="news" />
       </ToastProvider>,
     );
+    await userEvent.click(screen.getByRole('button', { name: /^upload$/i }));
     const input = container.querySelector('input[type="file"]');
     await userEvent.upload(input, new File(['x'], 'photo.png', { type: 'image/png' }));
     expect(await screen.findByText(/We couldn’t upload this file/)).toBeInTheDocument();

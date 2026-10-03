@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { News, Match, Player, Competition, Team } from '../../models/index.js';
 import { NEWS_CATEGORIES } from '../../models/Content.js';
 import { validate } from '../../middleware/validate.js';
-import { idParams, objectId, mediaInput, pagingQuery } from '../../validation/common.js';
+import { idParams, objectId, mediaInput, pagingQuery, externalImageProblem } from '../../validation/common.js';
 import { AppError } from '../../utils/AppError.js';
 import { uniqueSlug, containsRegex } from '../../utils/text.js';
 import { idString } from '../../utils/ids.js';
@@ -24,14 +24,9 @@ const FULL_POP = [
   { path: 'relatedPlayers', select: 'firstName lastName knownAs slug jerseyNumber hideFullNamePublicly showOnWebsite deletedAt' },
 ];
 
-/** An https link to an image on another website. Only ever used as <img src>; never fetched by the server. */
+/** An https link to an image on another website (same rules as every other image link). */
 export function isSafeImageUrl(value) {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && Boolean(url.hostname.includes('.')) && !url.username && !url.password;
-  } catch {
-    return false;
-  }
+  return !externalImageProblem(value);
 }
 
 /**
@@ -93,7 +88,10 @@ export function createNewsRouters({ auth, audit, config, notifications }) {
       .max(1000)
       .optional()
       .default('')
-      .refine((v) => !v || isSafeImageUrl(v), 'Paste a full image link starting with https://'),
+      .superRefine((v, ctx) => {
+        const problem = v ? externalImageProblem(v) : null;
+        if (problem) ctx.addIssue({ code: 'custom', message: problem });
+      }),
     externalImageAlt: z.string().trim().max(300).optional().default(''),
     videoUrl: z
       .string()

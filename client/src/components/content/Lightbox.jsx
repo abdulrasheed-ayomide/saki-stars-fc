@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Modal } from '../ui/Modal.jsx';
 import { imageUrl } from '../../lib/media.js';
 import { formatDate } from '../../lib/format.js';
+import { SafeImage, ImageUnavailable } from '../ui/SafeImage.jsx';
 
 /** Full-size image viewer with previous/next (arrow keys work too). */
 export function Lightbox({ items, index, onClose, onIndex }) {
@@ -22,7 +23,13 @@ export function Lightbox({ items, index, onClose, onIndex }) {
       {item && (
         <div>
           <div className="relative grid place-items-center bg-slate-950">
-            <img src={imageUrl(item.image.url, { width: 1600 })} alt={item.image.alt || item.caption || item.title || 'Club photo'} className="max-h-[70vh] w-auto object-contain" />
+            <SafeImage
+              key={item.image.url}
+              src={imageUrl(item.image.url, { width: 1600 })}
+              alt={item.image.alt || item.caption || item.title || 'Club photo'}
+              className="max-h-[70vh] w-auto object-contain"
+              fallback={<ImageUnavailable className="aspect-video w-full bg-slate-900 text-slate-500" label="This photo is no longer available." />}
+            />
           </div>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 text-sm text-slate-700">

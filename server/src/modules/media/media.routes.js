@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Video, GalleryItem, Match, Team } from '../../models/index.js';
+import { Video, GalleryItem, Match, Team, Player } from '../../models/index.js';
 import { VIDEO_CATEGORIES, GALLERY_CATEGORIES, normalizeVideoCategory } from '../../models/Content.js';
 
 // Accepts renamed categories in links/filters made before the rename (e.g. ?category=Youth).
@@ -51,6 +51,10 @@ const VIDEO_POP = [
   { path: 'team', select: 'name shortName slug logo isClubTeam' },
   { path: 'match', populate: MATCH_POPULATE },
 ];
+// Staff screens only: names of tagged players.
+const PLAYERS_POP = { path: 'players', select: 'firstName lastName slug' };
+// Tags: up to 30 players per photo/video. Omitted = keep the current tags (older forms).
+const playersInput = z.array(objectId).max(30, 'Tag at most 30 players.').optional();
 
 export function createMediaRouters({ auth, audit, config, media, upload, limiters }) {
   const uploads = Router();
@@ -109,10 +113,11 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
       category: videoCategoryQuery,
       source: z.enum(['youtube', 'cloudinary']),
       youtubeUrl: z.string().trim().max(300).optional().default(''),
-      media: mediaInput(config),
+      media: mediaInput(config, { allowLink: false }),
       thumbnailUrl: z.string().trim().max(1000).optional().default(''),
       team: objectId.nullable().optional(),
       match: objectId.nullable().optional(),
+      players: playersInput,
       status: z.enum(['draft', 'published', 'archived']).optional().default('published'),
       featured: z.boolean().optional().default(false),
       publishedAt: z.coerce.date().nullable().optional(),
@@ -141,6 +146,17 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
   async function checkRefs(body) {
     if (body.team && !(await Team.exists({ _id: body.team }))) throw AppError.validation([{ path: 'team', message: 'Team not found.' }]);
     if (body.match && !(await Match.exists({ _id: body.match }))) throw AppError.validation([{ path: 'match', message: 'Match not found.' }]);
+    if (body.players) {
+      body.players = [...new Set(body.players)];
+      if (body.players.length && (await Player.countDocuments({ _id: { $in: body.players }, deletedAt: null })) !== body.players.length) {
+        throw AppError.validation([{ path: 'players', message: 'One of the tagged players was not found.' }]);
+      }
+    }
+  }
+
+  /** Drops keys the form did not send, so an update never clears tags it did not mention. */
+  function definedOnly(obj) {
+    return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
   }
 
   videosAdmin.get('/', validate({ query: z.object({ status: z.enum(['draft', 'published', 'archived']).optional(), category: videoCategoryQuery.optional(), q: z.string().max(100).optional(), ...pagingQuery }) }), async (req, res) => {
@@ -149,19 +165,19 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (q) filter.title = containsRegex(q);
-    const result = await findPaged(Video, filter, getPaging(req.valid.query, { defaultLimit: 30 }), (qq) => qq.sort({ createdAt: -1 }).populate(VIDEO_POP));
+    const result = await findPaged(Video, filter, getPaging(req.valid.query, { defaultLimit: 30 }), (qq) => qq.sort({ createdAt: -1 }).populate(VIDEO_POP).populate(PLAYERS_POP));
     res.json({ data: { ...result, items: result.items.map(adminVideo), categories: VIDEO_CATEGORIES } });
   });
 
   videosAdmin.get('/:id', validate({ params: idParams }), async (req, res) => {
-    const v = await Video.findOne({ _id: req.valid.params.id, deletedAt: null }).populate(VIDEO_POP).lean();
+    const v = await Video.findOne({ _id: req.valid.params.id, deletedAt: null }).populate(VIDEO_POP).populate(PLAYERS_POP).lean();
     if (!v) throw AppError.notFound('Video not found.');
     res.json({ data: { ...adminVideo(v), youtubeUrl: v.youtubeId ? `https://www.youtube.com/watch?v=${v.youtubeId}` : '', rawMedia: v.media } });
   });
 
   videosAdmin.post('/', validate({ body: videoSchema }), async (req, res) => {
     await checkRefs(req.valid.body);
-    const v = await Video.create({ ...toDoc(req.valid.body), createdBy: req.auth.user._id });
+    const v = await Video.create({ ...toDoc(req.valid.body), players: req.valid.body.players || [], createdBy: req.auth.user._id });
     await audit(req, { action: 'video.created', entityType: 'Video', entityId: v._id, metadata: { title: v.title, source: v.source, status: v.status } });
     res.status(201).json({ data: adminVideo(v.toObject()) });
   });
@@ -171,7 +187,7 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     const v = await Video.findOne({ _id: req.valid.params.id, deletedAt: null });
     if (!v) throw AppError.notFound('Video not found.');
     const oldMedia = v.media?.publicId ? v.media.toObject() : null;
-    v.set(toDoc(req.valid.body));
+    v.set(definedOnly(toDoc(req.valid.body)));
     await v.save();
     if (oldMedia && oldMedia.publicId !== v.media?.publicId) await media.destroy(oldMedia);
     await audit(req, { action: 'video.updated', entityType: 'Video', entityId: v._id, metadata: { title: v.title, status: v.status } });
@@ -215,26 +231,29 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     title: z.string().trim().max(200).optional().default(''),
     caption: z.string().trim().max(1000).optional().default(''),
     category: z.enum(GALLERY_CATEGORIES),
-    image: mediaInput(config).refine((m) => m && m.resourceType === 'image', 'Upload an image.'),
+    image: mediaInput(config).refine((m) => m && m.resourceType === 'image', 'Add an image: upload one or paste an image link.'),
     team: objectId.nullable().optional(),
     match: objectId.nullable().optional(),
+    players: playersInput,
     takenAt: z.coerce.date().nullable().optional(),
     photographer: z.string().trim().max(120).optional().default(''),
     status: z.enum(['published', 'hidden']).optional().default('published'),
   });
 
-  galleryAdmin.get('/', validate({ query: z.object({ category: z.enum(GALLERY_CATEGORIES).optional(), status: z.enum(['published', 'hidden']).optional(), ...pagingQuery }) }), async (req, res) => {
-    const { category, status } = req.valid.query;
+  galleryAdmin.get('/', validate({ query: z.object({ category: z.enum(GALLERY_CATEGORIES).optional(), status: z.enum(['published', 'hidden']).optional(), q: z.string().max(100).optional(), ...pagingQuery }) }), async (req, res) => {
+    const { category, status, q } = req.valid.query;
     const filter = { deletedAt: null };
     if (category) filter.category = category;
     if (status) filter.status = status;
-    const result = await findPaged(GalleryItem, filter, getPaging(req.valid.query, { defaultLimit: 40 }), (qq) => qq.sort({ createdAt: -1 }).populate(GALLERY_POP));
+    // Optional text search (used by "Attach existing photo" on a player's page).
+    if (q) filter.$or = [{ title: containsRegex(q) }, { caption: containsRegex(q) }];
+    const result = await findPaged(GalleryItem, filter, getPaging(req.valid.query, { defaultLimit: 40 }), (qq) => qq.sort({ createdAt: -1 }).populate(GALLERY_POP).populate(PLAYERS_POP));
     res.json({ data: { ...result, items: result.items.map(adminGalleryItem), categories: GALLERY_CATEGORIES } });
   });
 
   galleryAdmin.post('/', validate({ body: gallerySchema }), async (req, res) => {
     await checkRefs(req.valid.body);
-    const g = await GalleryItem.create({ ...req.valid.body, uploadedBy: req.auth.user._id });
+    const g = await GalleryItem.create({ ...req.valid.body, players: req.valid.body.players || [], uploadedBy: req.auth.user._id });
     await audit(req, { action: 'gallery.created', entityType: 'GalleryItem', entityId: g._id, metadata: { category: g.category } });
     res.status(201).json({ data: adminGalleryItem(g.toObject()) });
   });
@@ -244,9 +263,9 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     const g = await GalleryItem.findOne({ _id: req.valid.params.id, deletedAt: null });
     if (!g) throw AppError.notFound('Image not found.');
     const old = g.image?.publicId ? g.image.toObject() : null;
-    g.set(req.valid.body);
+    g.set(definedOnly(req.valid.body));
     await g.save();
-    if (old && old.publicId !== g.image.publicId) await media.destroy(old);
+    if (old && old.publicId !== g.image?.publicId) await media.destroy(old);
     await audit(req, { action: 'gallery.updated', entityType: 'GalleryItem', entityId: g._id });
     res.json({ data: adminGalleryItem(g.toObject()) });
   });

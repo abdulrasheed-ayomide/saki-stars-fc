@@ -38,6 +38,8 @@ export const ERROR_CONTEXTS = {
   passwordReset: { title: 'Could not reset password', unavailable: 'We couldn’t process your password reset request right now.' },
   newsletter: { title: 'Could not subscribe', unavailable: 'We couldn’t update your newsletter subscription right now.' },
   upload: { title: 'Upload failed', unavailable: 'We couldn’t upload this file.' },
+  media: { title: 'Media not saved', unavailable: 'Something went wrong while saving this media.' },
+  playerMedia: { title: 'Player media could not be loaded', unavailable: 'This player’s photos and videos could not be loaded right now.' },
   application: { title: 'Application not sent', unavailable: 'We couldn’t submit your application right now.' },
 };
 

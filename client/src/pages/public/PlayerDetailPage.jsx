@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useApi } from '../../hooks/useApi.js';
 import { useSeo } from '../../hooks/useDocumentTitle.js';
@@ -11,6 +12,10 @@ import { TeamLogo } from '../../components/football/TeamLogo.jsx';
 import { SectionHeading } from '../../components/ui/Card.jsx';
 import NotFoundPage from '../NotFoundPage.jsx';
 import { Activity } from 'lucide-react';
+import { Lightbox } from '../../components/content/Lightbox.jsx';
+import { VideoPlayer, YouTubeEmbed } from '../../components/content/VideoCard.jsx';
+import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
+import { imageUrl, srcSet } from '../../lib/media.js';
 
 /** Public player profile: only PUBLIC data is ever returned by the API for this page. */
 export default function PlayerDetailPage() {
@@ -97,7 +102,62 @@ export default function PlayerDetailPage() {
             <EmptyState icon={Activity} title="No recorded appearances yet" />
           )}
         </section>
+        <PlayerMediaSections media={p.media} name={p.name} />
       </Container>
+    </>
+  );
+}
+
+/**
+ * Published photos and videos tagged with this player. Each section only appears when there is
+ * something to show. Photos are small, lazy-loaded thumbnails that open the gallery viewer;
+ * YouTube videos show only a thumbnail until tapped (no YouTube code is loaded before that).
+ */
+function PlayerMediaSections({ media, name }) {
+  const [index, setIndex] = useState(null);
+  const photos = media?.photos || [];
+  const videos = media?.videos || [];
+  if (!photos.length && !videos.length) return null;
+  return (
+    <>
+      {photos.length > 0 && (
+        <section aria-labelledby="photos-h">
+          <SectionHeading id="photos-h" title="Photos" />
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((g, i) => (
+              <li key={g.id}>
+                <button type="button" onClick={() => setIndex(i)} className="group block w-full overflow-hidden rounded-md" aria-label={`Open photo: ${g.title || g.caption || name}`}>
+                  <SafeImage
+                    src={imageUrl(g.image.url, { width: 400, height: 400 })}
+                    srcSet={srcSet(g.image.url, [300, 400, 600], { aspect: 1 })}
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                    alt={g.image.alt || g.title || ''}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full object-cover transition group-hover:scale-[1.02]"
+                    fallback={<ImageUnavailable className="aspect-square w-full" />}
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <Lightbox items={photos} index={index} onClose={() => setIndex(null)} onIndex={setIndex} />
+        </section>
+      )}
+      {videos.length > 0 && (
+        <section aria-labelledby="videos-h">
+          <SectionHeading id="videos-h" title="Videos" />
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {videos.map((v) => (
+              <li key={v.id} className="min-w-0">
+                {v.source === 'youtube' ? <YouTubeEmbed videoId={v.youtubeId} title={v.title} /> : <VideoPlayer video={v} />}
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-600">{v.category}</p>
+                <p className="line-clamp-2 font-semibold text-brand-900">{v.title}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

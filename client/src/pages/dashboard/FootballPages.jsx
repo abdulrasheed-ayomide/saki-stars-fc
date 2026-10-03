@@ -34,7 +34,8 @@ function TeamForm({ team, onClose, onSaved }) {
   const form = useForm({
     name: team?.name || '',
     shortName: team?.shortName || '',
-    isClubTeam: team ? team.isClubTeam : true,
+    // New teams start with no choice, so nobody adds an opponent as a club team by accident.
+    isClubTeam: team ? team.isClubTeam : null,
     logo: team?.logo || null,
     description: team?.description || '',
     category: team?.category || '',
@@ -48,6 +49,9 @@ function TeamForm({ team, onClose, onSaved }) {
   });
   const { values: v, set, errors: e } = form;
   const onSubmit = form.submit(async (values) => {
+    if (values.isClubTeam !== true && values.isClubTeam !== false) {
+      throw { code: 'VALIDATION_ERROR', details: [{ path: 'isClubTeam', message: 'Choose whether this is a Saki Stars team or an opponent.' }] };
+    }
     await apiRequest(team ? `/admin/teams/${team.id}` : '/admin/teams', {
       method: team ? 'PUT' : 'POST',
       body: { ...values, season: values.season || null, displayOrder: Number(values.displayOrder) || 100, logo: values.logo || null },
@@ -59,7 +63,27 @@ function TeamForm({ team, onClose, onSaved }) {
     <Modal open onClose={onClose} title={team ? `Edit ${team.name}` : 'Add team'} size="lg" footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={onSubmit} loading={form.submitting}>Save</Button></>}>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError error={form.formError} />
-        <Checkbox checked={v.isClubTeam} onChange={set('isClubTeam')} label="This is one of our club's teams" hint="Untick for opponents. Opponents are needed to record fixtures and full league tables." />
+        <fieldset aria-describedby="team-type-hint">
+          <legend className="text-sm font-medium text-slate-800">
+            Whose team is this? <span className="text-red-700" aria-hidden="true">*</span>
+          </legend>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            {[
+              [true, 'Saki Stars team', 'Shown on the public Teams page, with its players and staff.'],
+              [false, 'Opponent', 'Used for fixtures, results and league tables only. Not shown on the Teams page.'],
+            ].map(([val, title, desc]) => (
+              <label key={title} className={`flex min-h-11 cursor-pointer gap-3 rounded-md border p-3 ${v.isClubTeam === val ? 'border-brand-500 bg-brand-50' : 'border-slate-300 bg-white hover:bg-slate-50'}`}>
+                <input type="radio" name="team-type" className="mt-1 size-4 shrink-0" checked={v.isClubTeam === val} onChange={() => set('isClubTeam')(val)} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-slate-900">{title}</span>
+                  <span className="block text-xs text-slate-600">{desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p id="team-type-hint" className="mt-1 text-xs text-slate-500">Opponents stay available for fixtures, results and tables; they are never listed as Saki Stars teams.</p>
+          {e.isClubTeam && <p className="mt-1 text-sm text-red-700">{e.isClubTeam}</p>}
+        </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required error={e.name}><Input value={v.name} onChange={set('name')} maxLength={100} /></Field>
           <Field label="Short name" error={e.shortName}><Input value={v.shortName} onChange={set('shortName')} maxLength={30} /></Field>

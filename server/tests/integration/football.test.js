@@ -23,9 +23,9 @@ describeDb('football: fixtures, results, standings and statistics', () => {
     const club = await admin.post('/admin/teams').send({ name: 'Saki Stars First Team', isClubTeam: true, category: 'Senior' });
     expect(club.status).toBe(201);
     ids.club = club.body.data.id;
-    ids.rivers = (await admin.post('/admin/teams').send({ name: 'Rivers United' })).body.data.id;
-    ids.kano = (await admin.post('/admin/teams').send({ name: 'Kano Pillars' })).body.data.id;
-    ids.enyimba = (await admin.post('/admin/teams').send({ name: 'Enyimba' })).body.data.id;
+    ids.rivers = (await admin.post('/admin/teams').send({ name: 'Rivers United', isClubTeam: false })).body.data.id;
+    ids.kano = (await admin.post('/admin/teams').send({ name: 'Kano Pillars', isClubTeam: false })).body.data.id;
+    ids.enyimba = (await admin.post('/admin/teams').send({ name: 'Enyimba', isClubTeam: false })).body.data.id;
 
     const league = await admin.post('/admin/competitions').send({
       name: 'Nigeria League One',

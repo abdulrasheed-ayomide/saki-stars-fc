@@ -9,6 +9,7 @@ import { EmptyState, SkeletonGrid } from '../../components/ui/Feedback.jsx';
 import { Markdown } from '../../lib/markdown.jsx';
 import { imageUrl } from '../../lib/media.js';
 import { StaffCard } from './StaffPage.jsx';
+import { SafeImage } from '../../components/ui/SafeImage.jsx';
 
 const SECTIONS = [
   ['about', 'About'],
@@ -105,7 +106,7 @@ export default function ClubPage() {
           <SectionHeading id="stadium-h" title={settings.stadium?.name || 'Stadium'} />
           <div className="grid gap-6 md:grid-cols-2">
             {settings.stadium?.image?.url && (
-              <img src={imageUrl(settings.stadium.image.url, { width: 960, height: 540 })} alt={settings.stadium.image.alt || settings.stadium.name || 'Stadium'} loading="lazy" className="aspect-video w-full rounded-lg object-cover" />
+              <SafeImage src={imageUrl(settings.stadium.image.url, { width: 960, height: 540 })} alt={settings.stadium.image.alt || settings.stadium.name || 'Stadium'} loading="lazy" className="aspect-video w-full rounded-lg object-cover" />
             )}
             <div className="space-y-3">
               {settings.stadium?.description ? <Markdown text={settings.stadium.description} /> : <p className="text-slate-600">Stadium details will be published soon.</p>}

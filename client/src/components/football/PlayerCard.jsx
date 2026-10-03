@@ -1,23 +1,27 @@
 import { Link } from 'react-router';
 import { User } from 'lucide-react';
 import { imageUrl } from '../../lib/media.js';
+import { SafeImage } from '../ui/SafeImage.jsx';
 
 export function PlayerPhoto({ player, className = '', width = 320 }) {
-  if (player?.photo?.url) {
-    return (
-      <img
-        src={imageUrl(player.photo.url, { width, height: Math.round(width * 1.25) })}
-        alt={player.photo.alt || player.name}
-        loading="lazy"
-        className={`object-cover object-top ${className}`}
-      />
-    );
-  }
-  return (
+  const placeholder = (
     <div className={`grid place-items-center bg-gradient-to-b from-brand-100 to-brand-200 text-brand-700 ${className}`}>
       <User aria-hidden="true" className="size-1/3" />
     </div>
   );
+  if (player?.photo?.url) {
+    return (
+      <SafeImage
+        src={imageUrl(player.photo.url, { width, height: Math.round(width * 1.25) })}
+        alt={player.photo.alt || player.name}
+        loading="lazy"
+        decoding="async"
+        className={`object-cover object-top ${className}`}
+        fallback={placeholder}
+      />
+    );
+  }
+  return placeholder;
 }
 
 /** Public player card: photo, number, name, position. Never private data. */

@@ -9,13 +9,15 @@ import { Modal } from '../../components/ui/Modal.jsx';
 import { Tabs } from '../../components/ui/Tabs.jsx';
 import { imageUrl } from '../../lib/media.js';
 import { formatMonthYear } from '../../lib/format.js';
+import { SafeImage } from '../../components/ui/SafeImage.jsx';
 
 export function StaffCard({ staff, onOpen }) {
   const Tag = onOpen ? 'button' : 'div';
+  const [photoFailed, setPhotoFailed] = useState(false);
   return (
     <Tag type={onOpen ? 'button' : undefined} onClick={onOpen ? () => onOpen(staff) : undefined} className="flex w-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-brand-300">
-      {staff.photo?.url ? (
-        <img src={imageUrl(staff.photo.url, { width: 160, height: 160 })} alt="" loading="lazy" className="size-20 shrink-0 rounded-full object-cover object-top" />
+      {staff.photo?.url && !photoFailed ? (
+        <SafeImage src={imageUrl(staff.photo.url, { width: 160, height: 160 })} alt="" loading="lazy" className="size-20 shrink-0 rounded-full object-cover object-top" onFail={() => setPhotoFailed(true)} />
       ) : (
         <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700">
           <UserRound className="size-8" />
@@ -69,7 +71,7 @@ export default function StaffPage() {
       <Modal open={Boolean(open)} onClose={() => setOpen(null)} title={open?.fullName || ''} description={open?.title} size="lg">
         {open && (
           <div className="grid gap-5 sm:grid-cols-[10rem_1fr]">
-            {open.photo?.url && <img src={imageUrl(open.photo.url, { width: 320, height: 400 })} alt={open.photo.alt || open.fullName} className="w-40 rounded-lg object-cover" />}
+            {open.photo?.url && <SafeImage src={imageUrl(open.photo.url, { width: 320, height: 400 })} alt={open.photo.alt || open.fullName} className="w-40 rounded-lg object-cover" />}
             <div className="min-w-0 space-y-3 text-sm text-slate-700">
               {(open.department || open.team) && <p className="font-medium text-slate-900">{[open.department, open.team?.name].filter(Boolean).join(' · ')}</p>}
               {open.bio && <p className="whitespace-pre-line">{open.bio}</p>}

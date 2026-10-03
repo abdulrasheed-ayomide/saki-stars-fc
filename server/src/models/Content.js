@@ -82,6 +82,8 @@ const videoSchema = new Schema(
     thumbnailUrl: { type: String, maxlength: 1000, default: '' },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
     match: { type: Schema.Types.ObjectId, ref: 'Match', default: null },
+    // Players featured in this video (shown on their public profiles when published).
+    players: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
     status: { type: String, enum: ['draft', 'published', 'archived'], default: 'published' },
     featured: { type: Boolean, default: false },
     publishedAt: { type: Date, default: null },
@@ -91,6 +93,7 @@ const videoSchema = new Schema(
   { timestamps: true },
 );
 videoSchema.index({ status: 1, category: 1, publishedAt: -1 });
+videoSchema.index({ players: 1, status: 1, publishedAt: -1 });
 
 // ---------------------------------------------------------------------------- Gallery
 export const GALLERY_CATEGORIES = ['Matches', 'Training', 'Players', 'Youth', 'NEXT GEN', 'Fans', 'Events', 'Community'];
@@ -103,6 +106,8 @@ const galleryItemSchema = new Schema(
     image: { type: mediaSchema, required: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
     match: { type: Schema.Types.ObjectId, ref: 'Match', default: null },
+    // Players in this photo (shown on their public profiles when published).
+    players: [{ type: Schema.Types.ObjectId, ref: 'Player' }],
     takenAt: { type: Date, default: null },
     photographer: { type: String, maxlength: 120, default: '' },
     status: { type: String, enum: ['published', 'hidden'], default: 'published' },
@@ -112,6 +117,7 @@ const galleryItemSchema = new Schema(
   { timestamps: true },
 );
 galleryItemSchema.index({ status: 1, category: 1, createdAt: -1 });
+galleryItemSchema.index({ players: 1, status: 1, createdAt: -1 });
 
 // ---------------------------------------------------------------------------- Comment
 export const COMMENT_STATUSES = ['pending', 'approved', 'hidden', 'rejected', 'reported'];

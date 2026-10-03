@@ -27,6 +27,7 @@ import { imageUrl } from '../../lib/media.js';
 import { FilterBar, useCompetitions, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
 import { VIDEO_CATEGORIES } from '../../config/categories.js';
+import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
 
 // ------------------------------------------------------------------------------------- News
 export function NewsListPage() {
@@ -105,8 +106,6 @@ function NewsEditor({ article, reload }) {
     excerpt: article?.excerpt || '',
     content: article?.content || '',
     featuredImage: article?.featuredImage || null,
-    externalImageUrl: article?.externalImageUrl || '',
-    externalImageAlt: article?.externalImageAlt || '',
     videoUrl: article?.videoUrl || '',
     category: article?.category || 'Club News',
     competition: article?.competition?.id || '',
@@ -118,7 +117,9 @@ function NewsEditor({ article, reload }) {
   const { values: v, set, errors: e } = form;
 
   const onSubmit = form.submit(async (values) => {
-    const body = { ...values, competition: values.competition || null, team: values.team || null, featuredImage: values.featuredImage || null, slug: isNew ? undefined : values.slug };
+    // The featured image is an upload or a link (shared image field). The older separate
+    // link field is cleared on save; its value already appears in the featured image.
+    const body = { ...values, competition: values.competition || null, team: values.team || null, featuredImage: values.featuredImage || null, externalImageUrl: '', externalImageAlt: '', slug: isNew ? undefined : values.slug };
     const saved = await apiRequest(isNew ? '/admin/news' : `/admin/news/${article.id}`, { method: isNew ? 'POST' : 'PUT', body });
     notify(isNew ? 'Draft saved.' : 'Article saved.');
     if (isNew) navigate(`/dashboard/news/${saved.id}`, { replace: true });
@@ -203,18 +204,6 @@ function NewsEditor({ article, reload }) {
         <fieldset disabled={!editable} className="min-w-0 space-y-4">
           <Card className="space-y-4 p-4">
             <MediaUpload label="Featured image" folder="news" value={v.featuredImage} onChange={set('featuredImage')} />
-            <Field
-              label="Or: image link"
-              error={e.externalImageUrl}
-              hint={v.featuredImage ? 'Not used while an image is uploaded above.' : 'A picture already online (https://…). Nothing is copied to the club’s storage.'}
-            >
-              <Input type="url" inputMode="url" value={v.externalImageUrl} onChange={set('externalImageUrl')} placeholder="https://" maxLength={1000} />
-            </Field>
-            {v.externalImageUrl && !v.featuredImage && (
-              <Field label="Image description" error={e.externalImageAlt} hint="What the picture shows, for screen readers.">
-                <Input value={v.externalImageAlt} onChange={set('externalImageAlt')} maxLength={300} />
-              </Field>
-            )}
             <Field label="YouTube video (optional)" error={e.videoUrl} hint="Paste the YouTube link. It plays inside the article; the video stays on YouTube.">
               <Input type="url" inputMode="url" value={v.videoUrl} onChange={set('videoUrl')} placeholder="https://www.youtube.com/watch?v=…" maxLength={300} />
             </Field>
@@ -264,7 +253,55 @@ function NewsEditor({ article, reload }) {
 
 // ------------------------------------------------------------------------------------- Videos
 
-function VideoForm({ video, onClose, onSaved }) {
+/**
+ * "Players in this photo/video": tick one or more players. Tags only link the item to player
+ * profiles; removing a tag never deletes the item. Uses a minimal staff-only player list.
+ */
+export function PlayerTagPicker({ value, onChange, error }) {
+  const options = useApi('/admin/players/options');
+  const [q, setQ] = useState('');
+  const list = options.data || [];
+  const term = q.trim().toLowerCase();
+  const shown = term ? list.filter((p) => p.name.toLowerCase().includes(term) || String(p.jerseyNumber ?? '') === term) : list;
+  const selected = list.filter((p) => value.includes(p.id));
+  const toggle = (id, on) => onChange(on ? [...value, id] : value.filter((x) => x !== id));
+  return (
+    <fieldset className="min-w-0">
+      <legend className="text-sm font-medium text-slate-800">Players featured</legend>
+      <p className="text-xs text-slate-500">Published items also appear on these players’ public profiles.</p>
+      {selected.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Tagged players">
+          {selected.map((p) => (
+            <li key={p.id}>
+              <button type="button" onClick={() => toggle(p.id, false)} className="inline-flex min-h-8 max-w-full items-center gap-1 rounded-full bg-brand-50 px-2.5 text-xs font-medium text-brand-800 ring-1 ring-brand-200 hover:bg-brand-100" aria-label={`Remove ${p.name}`}>
+                <span className="truncate">{p.name}</span>
+                <X aria-hidden="true" className="size-3.5 shrink-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {options.error ? (
+        <p className="mt-2 text-sm text-red-700">{userMessage(options.error, 'players')}</p>
+      ) : (
+        <>
+          <Input type="search" className="mt-2" placeholder="Search players" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search players to tag" />
+          <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+            {shown.slice(0, 200).map((p) => (
+              <li key={p.id}>
+                <Checkbox label={`${p.jerseyNumber != null ? `#${p.jerseyNumber} ` : ''}${p.name}${p.team ? ` · ${p.team}` : ''}`} checked={value.includes(p.id)} onChange={(ev) => toggle(p.id, ev.target.checked)} />
+              </li>
+            ))}
+            {!options.loading && !shown.length && <li className="px-1 text-sm text-slate-500">No players found.</li>}
+          </ul>
+        </>
+      )}
+      {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
+    </fieldset>
+  );
+}
+
+export function VideoForm({ video, presetPlayers = [], onClose, onSaved }) {
   const { notify } = useToast();
   const teams = useTeams({ clubOnly: true });
   const matches = useApi('/admin/matches?status=completed&limit=50');
@@ -277,6 +314,7 @@ function VideoForm({ video, onClose, onSaved }) {
     media: video?.rawMedia || video?.media || null,
     team: video?.teamId || '',
     match: video?.matchId || '',
+    players: video ? (video.players || []).map((p) => p.id) : presetPlayers,
     status: video?.status || 'published',
     featured: Boolean(video?.featured),
     publishedAt: toDateInput(video?.publishedAt),
@@ -293,7 +331,7 @@ function VideoForm({ video, onClose, onSaved }) {
   return (
     <Modal open onClose={onClose} title={video ? 'Edit video' : 'Add video'} size="lg" footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={onSubmit} loading={form.submitting}>Save</Button></>}>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <FormError error={form.formError} />
+        <FormError error={form.formError} context="media" />
         <Field label="Title" required error={e.title}><Input value={v.title} onChange={set('title')} maxLength={200} /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Category" error={e.category}><Select value={v.category} onChange={set('category')}>{VIDEO_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
@@ -320,6 +358,7 @@ function VideoForm({ video, onClose, onSaved }) {
           <Field label="Publish date" error={e.publishedAt}><Input type="date" value={v.publishedAt} onChange={set('publishedAt')} /></Field>
         </div>
         <Checkbox checked={v.featured} onChange={set('featured')} label="Feature this video" />
+        <PlayerTagPicker value={v.players} onChange={set('players')} error={e.players} />
       </form>
     </Modal>
   );
@@ -395,7 +434,7 @@ export function VideosAdminPage() {
 // ------------------------------------------------------------------------------------- Gallery
 const GALLERY_CATEGORIES = ['Matches', 'Training', 'Players', 'Youth', 'NEXT GEN', 'Fans', 'Events', 'Community'];
 
-function GalleryForm({ item, onClose, onSaved }) {
+export function GalleryForm({ item, presetPlayers = [], onClose, onSaved }) {
   const { notify } = useToast();
   const teams = useTeams({ clubOnly: true });
   const form = useForm({
@@ -404,6 +443,7 @@ function GalleryForm({ item, onClose, onSaved }) {
     category: item?.category || 'Matches',
     image: item?.image || null,
     team: item?.teamId || '',
+    players: item ? (item.players || []).map((p) => p.id) : presetPlayers,
     takenAt: toDateInput(item?.takenAt),
     photographer: item?.photographer || '',
     status: item?.status || 'published',
@@ -417,7 +457,7 @@ function GalleryForm({ item, onClose, onSaved }) {
   return (
     <Modal open onClose={onClose} title={item ? 'Edit photo' : 'Add photo'} size="lg" footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={onSubmit} loading={form.submitting} disabled={!v.image}>Save</Button></>}>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <FormError error={form.formError} />
+        <FormError error={form.formError} context="media" />
         <MediaUpload label="Photo" folder="gallery" value={v.image} onChange={set('image')} />
         {e.image && <p className="text-sm text-red-700">{e.image}</p>}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -429,6 +469,7 @@ function GalleryForm({ item, onClose, onSaved }) {
           <Field label="Visibility" error={e.status}><Select value={v.status} onChange={set('status')}><option value="published">Published</option><option value="hidden">Hidden</option></Select></Field>
         </div>
         <Field label="Caption" error={e.caption}><Textarea value={v.caption} onChange={set('caption')} rows={2} maxLength={1000} /></Field>
+        <PlayerTagPicker value={v.players} onChange={set('players')} error={e.players} />
       </form>
     </Modal>
   );
@@ -455,7 +496,7 @@ export function GalleryAdminPage() {
   }
   return (
     <>
-      <PageHeader title="Gallery" description="Photos are stored in Cloudinary and delivered in optimised sizes." actions={<Button icon={Plus} onClick={() => setEdit('new')}>Add photo</Button>} />
+      <PageHeader title="Gallery" description="Upload photos to Cloudinary or paste image links. Tag players to show photos on their profiles." actions={<Button icon={Plus} onClick={() => setEdit('new')}>Add photo</Button>} />
       <div className="mb-4 max-w-xs"><Field label="Category"><Select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}><option value="">All</option>{GALLERY_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select></Field></div>
       <AsyncContent state={state} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Images} title="No photos yet" action={<Button icon={Plus} onClick={() => setEdit('new')}>Add a photo</Button>} />}>
         {(d) => (
@@ -464,7 +505,7 @@ export function GalleryAdminPage() {
               {d.items.map((g) => (
                 <li key={g.id}>
                   <Card className="overflow-hidden">
-                    <img src={imageUrl(g.image.url, { width: 400, height: 300 })} alt={g.image.alt || g.title || ''} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+                    <SafeImage src={imageUrl(g.image.url, { width: 400, height: 300 })} alt={g.image.alt || g.title || ''} className="aspect-[4/3] w-full object-cover" loading="lazy" fallback={<ImageUnavailable className="aspect-[4/3] w-full" label="Image link no longer works" />} />
                     <div className="p-2">
                       <p className="truncate text-sm font-medium">{g.title || g.category}</p>
                       <p className="flex items-center gap-1 text-xs text-slate-500"><StatusBadge status={g.status} /> {g.category}</p>

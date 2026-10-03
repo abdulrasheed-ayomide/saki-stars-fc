@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { Archive, ExternalLink, FileText, Lock, Plus, ShieldAlert, Shirt, Trash2, Upload } from 'lucide-react';
+import { Archive, Check, ExternalLink, FileText, ImagePlus, Link2, Lock, PlayCircle, Plus, Search, ShieldAlert, Shirt, Tag, Trash2, Upload, Video } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useApi, qs } from '../../hooks/useApi.js';
 import { useDebounce } from '../../hooks/useDebounce.js';
@@ -13,7 +13,7 @@ import { StatusBadge, Badge } from '../../components/ui/Badge.jsx';
 import { Card, CardHeader } from '../../components/ui/Card.jsx';
 import { Button, ButtonLink, IconButton } from '../../components/ui/Button.jsx';
 import { Field, Input, Select, Textarea, Checkbox } from '../../components/ui/Field.jsx';
-import { ConfirmDialog } from '../../components/ui/Modal.jsx';
+import { ConfirmDialog, Modal } from '../../components/ui/Modal.jsx';
 import { Pagination } from '../../components/ui/Pagination.jsx';
 import { MediaUpload } from '../../components/ui/ImageUpload.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
@@ -24,6 +24,10 @@ import { POSITIONS } from '../../lib/labels.js';
 import { formatDate, toDateInput } from '../../lib/format.js';
 import { FilterBar, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
+import { GalleryForm, VideoForm } from './ContentPages.jsx';
+import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
+import { videoThumb } from '../../components/content/VideoCard.jsx';
+import { imageUrl } from '../../lib/media.js';
 
 const STATUSES = [
   ['active', 'Active'],
@@ -360,6 +364,8 @@ function PlayerForm({ player, onSaved }) {
         )}
       </form>
 
+      {!isNew && <PlayerMedia player={player} />}
+
       {!isNew && player.restricted && <Documents player={player} onChanged={onSaved} canHighly={Boolean(player.sensitive)} />}
 
       <ConfirmDialog open={archive} onClose={() => setArchive(false)} onConfirm={doArchive} title="Archive this player?" confirmLabel="Archive">
@@ -459,6 +465,178 @@ function Documents({ player, onChanged, canHighly }) {
       </div>
       <ConfirmDialog open={Boolean(remove)} onClose={() => setRemove(null)} onConfirm={doRemove} title="Delete document?" confirmLabel="Delete">
         The file is deleted permanently.
+      </ConfirmDialog>
+    </Card>
+  );
+}
+
+/**
+ * Photos and videos tagged with this player (from the Gallery and Video library). Staff who can
+ * view the player can see the list; only media managers (media.manage) can add items or remove a
+ * tag. Removing a tag never deletes the photo or video itself.
+ */
+/**
+ * Picker for tagging an EXISTING Gallery photo or Video with this player. Uses the existing staff
+ * lists (searchable, one page at a time) and only adds the player's tag; no media is copied.
+ */
+function AttachExistingMedia({ kind, player, onClose, onAttached }) {
+  const { notify } = useToast();
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [busyId, setBusyId] = useState(null);
+  const [attached, setAttached] = useState(() => new Set());
+  const query = useDebounce(q, 300);
+  const base = kind === 'photo' ? '/admin/gallery' : '/admin/videos';
+  const state = useApi(`${base}${qs({ q: query.trim() || undefined, page, limit: 12 })}`);
+  const noun = kind === 'photo' ? 'photo' : 'video';
+
+  async function attach(item) {
+    setBusyId(item.id);
+    try {
+      await apiRequest(`/admin/players/${player.id}/media/${kind}/${item.id}`, { method: 'POST' });
+      setAttached((s) => new Set(s).add(item.id));
+      notify(`${player.fullName} is now tagged in this ${noun}.`);
+      onAttached();
+    } catch (err) {
+      notify(userMessage(err, 'media'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} size="lg" title={`Attach an existing ${noun}`} description={`Tags ${player.fullName} in a ${noun} already in the ${kind === 'photo' ? 'Gallery' : 'Video library'}. Nothing is copied or uploaded.`} footer={<Button variant="outline" onClick={onClose}>Done</Button>}>
+      <div className="relative mb-4">
+        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+        <Input type="search" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} className="pl-9" aria-label={`Search ${noun}s by title`} placeholder={kind === 'photo' ? 'Search by title or caption' : 'Search by title'} />
+      </div>
+      <AsyncContent state={state} context="playerMedia" isEmpty={(x) => !x.items.length} empty={<EmptyState icon={kind === 'photo' ? ImagePlus : Video} title={query ? `No ${noun}s match “${query}”` : `No ${noun}s yet`} />}>
+        {(x) => (
+          <>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {x.items.map((item) => {
+                const isTagged = attached.has(item.id) || (item.players || []).some((pl) => pl.id === player.id);
+                const thumb = kind === 'photo' ? (item.image?.url ? imageUrl(item.image.url, { width: 400, height: 225 }) : null) : videoThumb(item);
+                const title = kind === 'photo' ? item.title || item.caption || item.category : item.title;
+                return (
+                  <li key={item.id} className="min-w-0 overflow-hidden rounded-md border border-slate-200 bg-white">
+                    <div className="relative aspect-video bg-slate-100">
+                      {thumb ? (
+                        <SafeImage src={thumb} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" fallback={<ImageUnavailable className="absolute inset-0 size-full" label="Image link no longer works" />} />
+                      ) : (
+                        <ImageUnavailable className="absolute inset-0 size-full" label="No preview" />
+                      )}
+                      {kind === 'video' && <PlayCircle aria-hidden="true" className="absolute left-2 top-2 size-6 text-white drop-shadow" />}
+                    </div>
+                    <div className="space-y-1 p-2">
+                      <p className="truncate text-sm font-medium" title={title}>{title}</p>
+                      <p className="flex flex-wrap items-center gap-1 text-xs text-slate-500"><StatusBadge status={item.status} /> <span className="truncate">{item.category}</span></p>
+                      <Button variant={isTagged ? 'ghost' : 'outline'} size="sm" icon={isTagged ? Check : Tag} className="w-full" disabled={isTagged} loading={busyId === item.id} onClick={() => attach(item)}>
+                        {isTagged ? 'Attached' : 'Attach'}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <Pagination page={x.page} pages={x.pages} onChange={setPage} className="mt-4" />
+          </>
+        )}
+      </AsyncContent>
+    </Modal>
+  );
+}
+
+function PlayerMedia({ player }) {
+  const state = useApi(`/admin/players/${player.id}/media`);
+  const { notify } = useToast();
+  const [adding, setAdding] = useState(null); // 'photo' | 'video'
+  const [untag, setUntag] = useState(null); // { kind, item }
+  const [attaching, setAttaching] = useState(null); // 'photo' | 'video'
+  const d = state.data;
+
+  async function doUntag() {
+    try {
+      await apiRequest(`/admin/players/${player.id}/media/${untag.kind}/${untag.item.id}`, { method: 'DELETE' });
+      notify(`Removed ${player.fullName} from this ${untag.kind}. The ${untag.kind} itself was not deleted.`);
+      state.reload();
+    } catch (err) {
+      notify(userMessage(err, 'media'), 'error');
+    } finally {
+      setUntag(null);
+    }
+  }
+
+  const tile = (kind, item, thumb, title) => (
+    <li key={item.id} className="min-w-0">
+      <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+        <div className="relative aspect-video bg-slate-100">
+          {thumb ? (
+            <SafeImage src={thumb} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" fallback={<ImageUnavailable className="absolute inset-0 size-full" label="Image link no longer works" />} />
+          ) : (
+            <ImageUnavailable className="absolute inset-0 size-full" label="No preview" />
+          )}
+          {kind === 'video' && <PlayCircle aria-hidden="true" className="absolute left-2 top-2 size-6 text-white drop-shadow" />}
+        </div>
+        <div className="space-y-1 p-2">
+          <p className="truncate text-sm font-medium" title={title}>{title}</p>
+          <p className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
+            <StatusBadge status={item.status} /> <span className="truncate">{item.category}</span>
+          </p>
+          {d?.canManage && (
+            <Button variant="ghost" size="sm" icon={Tag} className="w-full" onClick={() => setUntag({ kind, item })}>
+              Remove tag
+            </Button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+
+  return (
+    <Card className="mt-4">
+      <CardHeader
+        title="Photos and videos"
+        description="Items from the Gallery and Video library tagged with this player. Published ones appear on the public profile."
+      />
+      <div className="space-y-5 p-4">
+        {d?.canManage && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" icon={ImagePlus} onClick={() => setAdding('photo')}>Add photo</Button>
+            <Button variant="outline" size="sm" icon={Video} onClick={() => setAdding('video')}>Add video</Button>
+            <Button variant="outline" size="sm" icon={Link2} onClick={() => setAttaching('photo')}>Attach existing photo</Button>
+            <Button variant="outline" size="sm" icon={Link2} onClick={() => setAttaching('video')}>Attach existing video</Button>
+          </div>
+        )}
+        {d?.photosHiddenPublicly && <Alert tone="info">This player’s photo is hidden publicly, so tagged photos are not shown on their profile.</Alert>}
+        <AsyncContent state={state} context="playerMedia" isEmpty={(x) => !x.photos.length && !x.videos.length} empty={<EmptyState icon={ImagePlus} title="No photos or videos yet">{d?.canManage ? 'Add one above, or tag this player when adding photos in the Gallery or videos in the Video library.' : 'Media staff can tag this player in Gallery photos and videos.'}</EmptyState>}>
+          {(x) => (
+            <>
+              {x.photos.length > 0 && (
+                <section aria-label="Photos">
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">Photos ({x.photos.length})</h3>
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {x.photos.map((g) => tile('photo', g, g.image?.url ? imageUrl(g.image.url, { width: 400, height: 225 }) : null, g.title || g.caption || g.category))}
+                  </ul>
+                </section>
+              )}
+              {x.videos.length > 0 && (
+                <section aria-label="Videos" className={x.photos.length ? 'mt-5' : ''}>
+                  <h3 className="mb-2 text-sm font-semibold text-slate-700">Videos ({x.videos.length})</h3>
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {x.videos.map((v) => tile('video', v, videoThumb(v), v.title))}
+                  </ul>
+                </section>
+              )}
+            </>
+          )}
+        </AsyncContent>
+      </div>
+      {adding === 'photo' && <GalleryForm presetPlayers={[player.id]} onClose={() => setAdding(null)} onSaved={() => { setAdding(null); state.reload(); }} />}
+      {adding === 'video' && <VideoForm presetPlayers={[player.id]} onClose={() => setAdding(null)} onSaved={() => { setAdding(null); state.reload(); }} />}
+      {attaching && <AttachExistingMedia kind={attaching} player={player} onClose={() => setAttaching(null)} onAttached={state.reload} />}
+      <ConfirmDialog open={Boolean(untag)} onClose={() => setUntag(null)} onConfirm={doUntag} title={`Remove ${player.fullName} from this ${untag?.kind || 'item'}?`} confirmLabel="Remove tag">
+        The {untag?.kind} stays in the {untag?.kind === 'video' ? 'Video library' : 'Gallery'} and on other players’ profiles. Only this player’s tag is removed.
       </ConfirmDialog>
     </Card>
   );

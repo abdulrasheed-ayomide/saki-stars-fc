@@ -20,6 +20,7 @@ import { Lightbox } from '../components/content/Lightbox.jsx';
 import { Modal } from '../components/ui/Modal.jsx';
 import { formatDateLong, formatTime } from '../lib/format.js';
 import { imageUrl } from '../lib/media.js';
+import { SafeImage, ImageUnavailable } from '../components/ui/SafeImage.jsx';
 
 function Section({ id, className = '', children }) {
   return (
@@ -44,7 +45,7 @@ function Hero() {
   return (
     <section aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-brand-900 text-white">
       {bg ? (
-        <img src={imageUrl(bg, { width: 1920 })} alt="" className="absolute inset-0 -z-20 size-full object-cover" fetchPriority="high" />
+        <SafeImage src={imageUrl(bg, { width: 1920 })} alt="" className="absolute inset-0 -z-20 size-full object-cover" fetchPriority="high" />
       ) : (
         <svg aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full opacity-[0.07]" preserveAspectRatio="xMidYMid slice" viewBox="0 0 1200 600">
           <g fill="none" stroke="currentColor" strokeWidth="3">
@@ -348,7 +349,7 @@ function GalleryPreview() {
           {items.map((g, i) => (
             <li key={g.id}>
               <button type="button" onClick={() => setIndex(i)} className="block w-full overflow-hidden rounded-md" aria-label={`Open photo: ${g.title || g.caption || g.category}`}>
-                <img src={imageUrl(g.image.url, { width: 480, height: 480 })} alt={g.image.alt || g.title || ''} loading="lazy" className="aspect-square w-full object-cover transition hover:opacity-90" />
+                <SafeImage src={imageUrl(g.image.url, { width: 480, height: 480 })} alt={g.image.alt || g.title || ''} loading="lazy" className="aspect-square w-full object-cover transition hover:opacity-90" fallback={<ImageUnavailable className="aspect-square w-full" />} />
               </button>
             </li>
           ))}

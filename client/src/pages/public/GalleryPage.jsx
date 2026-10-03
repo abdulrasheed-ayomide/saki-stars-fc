@@ -9,6 +9,7 @@ import { AsyncContent, EmptyState, SkeletonGrid } from '../../components/ui/Feed
 import { Pagination } from '../../components/ui/Pagination.jsx';
 import { Lightbox } from '../../components/content/Lightbox.jsx';
 import { imageUrl, srcSet } from '../../lib/media.js';
+import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
 
 const CATEGORIES = ['Matches', 'Training', 'Players', 'Youth', 'NEXT GEN', 'Fans', 'Events', 'Community'];
 
@@ -55,7 +56,8 @@ export default function GalleryPage() {
                 {d.items.map((g, i) => (
                   <li key={g.id}>
                     <button type="button" onClick={() => setIndex(i)} className="group block w-full overflow-hidden rounded-md" aria-label={`Open photo: ${g.title || g.caption || g.category}`}>
-                      <img
+                      <SafeImage
+                        fallback={<ImageUnavailable className="aspect-square w-full" />}
                         src={imageUrl(g.image.url, { width: 400, height: 400 })}
                         srcSet={srcSet(g.image.url, [300, 400, 600], { aspect: 1 })}
                         sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"

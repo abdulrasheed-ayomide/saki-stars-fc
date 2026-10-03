@@ -26,7 +26,9 @@ export function createTeamRouters({ auth, audit, config, media }) {
   const teamSchema = z.object({
     name: z.string().trim().min(2, 'Enter the team name.').max(100),
     shortName: z.string().trim().max(30).optional().default(''),
-    isClubTeam: z.boolean().optional().default(false),
+    // Required on create and update: a missing value must never silently turn a club team into
+    // an opponent (or the other way round).
+    isClubTeam: z.boolean({ error: 'Choose whether this is a Saki Stars team or an opponent.' }),
     logo: mediaInput(config),
     description: z.string().trim().max(4000).optional().default(''),
     category: z.string().trim().max(60).optional().default(''),
@@ -40,17 +42,20 @@ export function createTeamRouters({ auth, audit, config, media }) {
   });
 
   // ---- Public -----------------------------------------------------------------------
-  pub.get('/', validate({ query: z.object({ include: z.enum(['club', 'all']).optional(), competition: objectId.optional() }) }), async (req, res) => {
-    const { include, competition } = req.valid.query;
-    const filter = { status: 'active' };
-    if (include !== 'all') filter.isClubTeam = true;
+  // Public list: Saki Stars teams only. Opponents appear publicly only inside fixtures, results and
+  // tables; staff forms that need opponents use the signed-in /admin/teams list.
+  pub.get('/', validate({ query: z.object({ competition: objectId.optional() }) }), async (req, res) => {
+    const { competition } = req.valid.query;
+    const filter = { status: 'active', isClubTeam: true };
     if (competition) filter.competitions = competition;
     const teams = await Team.find(filter).sort({ displayOrder: 1, name: 1 }).populate('competitions', 'name shortName slug logo type').lean();
     res.json({ data: teams.map(publicTeam) });
   });
 
   pub.get('/:id', async (req, res) => {
-    const team = await Team.findOne({ ...idOrSlugFilter(req.params.id), status: { $ne: 'archived' } })
+    // Opponents have no standalone public page (normal "not found"); they stay in the database and
+    // keep appearing in fixtures, results and tables.
+    const team = await Team.findOne({ ...idOrSlugFilter(req.params.id), isClubTeam: true, status: { $ne: 'archived' } })
       .populate('competitions', 'name shortName slug logo type')
       .populate('season', 'name startDate endDate isCurrent status')
       .lean();

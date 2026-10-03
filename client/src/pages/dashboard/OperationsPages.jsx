@@ -648,7 +648,7 @@ export function DashboardSearchPage() {
           {Section({ title: 'Players', items: d.players, render: (p) => <li key={p.id}><Link to={`/dashboard/players/${p.id}`} className="block px-4 py-2 hover:bg-slate-50">{p.fullName} <span className="text-sm text-slate-500">{p.team?.name}</span></Link></li> })}
           {Section({ title: 'Users', items: d.users, render: (u) => <li key={u.id}><Link to={`/dashboard/users/${u.id}`} className="block px-4 py-2 hover:bg-slate-50">{u.name} <span className="text-sm text-slate-500">{u.email}</span></Link></li> })}
           {Section({ title: 'News', items: d.news, render: (n) => <li key={n.id}><Link to={`/dashboard/news/${n.id}`} className="block px-4 py-2 hover:bg-slate-50">{n.title} <StatusBadge status={n.status} /></Link></li> })}
-          {Section({ title: 'Teams', items: d.teams, render: (t) => <li key={t.id}><Link to={`/teams/${t.slug}`} className="block px-4 py-2 hover:bg-slate-50">{t.name}</Link></li> })}
+          {Section({ title: 'Teams', items: d.teams, render: (t) => <li key={t.id}>{t.isClubTeam ? <Link to={`/teams/${t.slug}`} className="block px-4 py-2 hover:bg-slate-50">{t.name}</Link> : <span className="block px-4 py-2">{t.name} <span className="text-sm text-slate-500">· Opponent (no public page)</span></span>}</li> })}
           {!Object.values(d).some((x) => x?.length) && <EmptyState icon={Search} title="Nothing found" />}
         </div>
       )}
