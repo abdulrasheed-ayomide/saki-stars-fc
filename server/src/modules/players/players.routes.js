@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Player, Team, Match, User, ScoutingReport, Video, GalleryItem } from '../../models/index.js';
-import { POSITIONS, PLAYER_STATUSES } from '../../models/Player.js';
+import { POSITIONS, PLAYER_STATUSES, SQUADS } from '../../models/Player.js';
 import { validate } from '../../middleware/validate.js';
 import { idParams, objectId, mediaInput, pagingQuery } from '../../validation/common.js';
 import { AppError } from '../../utils/AppError.js';
@@ -42,10 +42,21 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
   // ---- Public ------------------------------------------------------------------------
   pub.get(
     '/',
-    validate({ query: z.object({ team: objectId.optional(), position: z.enum(POSITIONS).optional(), q: z.string().max(100).optional(), featured: z.enum(['true']).optional(), ...pagingQuery }) }),
+    validate({
+      query: z.object({
+        team: objectId.optional(),
+        // A squad page lists only players assigned to that squad (players not assigned yet are on /players).
+        squad: z.enum(SQUADS).optional(),
+        position: z.enum(POSITIONS).optional(),
+        q: z.string().max(100).optional(),
+        featured: z.enum(['true']).optional(),
+        ...pagingQuery,
+      }),
+    }),
     async (req, res) => {
-      const { team, position, q, featured } = req.valid.query;
+      const { team, squad, position, q, featured } = req.valid.query;
       const filter = await publicPlayerFilter({ team });
+      if (squad) filter.$and.push({ squad });
       if (position) filter.$and.push({ position });
       if (featured) filter.$and.push({ featured: true });
       if (q) {
@@ -111,6 +122,9 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
     detailedPosition: z.string().trim().max(60).optional().default(''),
     jerseyNumber: z.number().int().min(1).max(99).nullable().optional(),
     team: objectId.nullable().optional(),
+    // Optional so older forms and players created from applications keep working (left
+    // unassigned); when sent it must be one of the two squads. Omitted on update = unchanged.
+    squad: z.enum(SQUADS, { error: 'Choose the player’s squad: Senior or Under-19.' }).optional(),
     nationality: z.string().trim().max(60).optional().default(''),
     bio: z.string().trim().max(4000).optional().default(''),
     preferredFoot: z.enum(['left', 'right', 'both', '']).optional().default(''),
@@ -152,12 +166,22 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
   admin.get(
     '/',
     auth.requirePermission('players.view', 'players.edit'),
-    validate({ query: z.object({ team: objectId.optional(), position: z.enum(POSITIONS).optional(), status: z.enum(PLAYER_STATUSES).optional(), q: z.string().max(100).optional(), ...pagingQuery }) }),
+    validate({
+      query: z.object({
+        team: objectId.optional(),
+        squad: z.enum([...SQUADS, 'unassigned']).optional(),
+        position: z.enum(POSITIONS).optional(),
+        status: z.enum(PLAYER_STATUSES).optional(),
+        q: z.string().max(100).optional(),
+        ...pagingQuery,
+      }),
+    }),
     async (req, res) => {
-      const { team, position, status, q } = req.valid.query;
+      const { team, squad, position, status, q } = req.valid.query;
       const permission = scopeOf(req.auth, 'players.view') ? 'players.view' : 'players.edit';
       const filter = { deletedAt: null, ...playerScopeFilter(req.auth, permission) };
       if (team) filter.team = filter.team ? { $in: (filter.team.$in || []).filter((t) => t === team) } : team;
+      if (squad) filter.squad = squad === 'unassigned' ? { $nin: SQUADS } : squad;
       if (position) filter.position = position;
       if (status) filter.status = status;
       if (q) {
@@ -165,8 +189,12 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
         filter.$or = [{ firstName: rx }, { lastName: rx }, { knownAs: rx }];
       }
       const paging = getPaging(req.valid.query, { defaultLimit: 50 });
-      const result = await findPaged(Player, filter, paging, (qq) => qq.sort({ lastName: 1, firstName: 1 }).populate(TEAM_POP));
-      res.json({ data: { ...result, items: result.items.map((p) => staffPlayer(p)) } });
+      const [result, unassigned] = await Promise.all([
+        findPaged(Player, filter, paging, (qq) => qq.sort({ lastName: 1, firstName: 1 }).populate(TEAM_POP)),
+        // Players (in the caller's scope) who still need a squad, so staff can assign them.
+        Player.countDocuments({ deletedAt: null, ...playerScopeFilter(req.auth, permission), status: { $ne: 'archived' }, squad: { $nin: SQUADS } }),
+      ]);
+      res.json({ data: { ...result, items: result.items.map((p) => staffPlayer(p)), unassignedSquadCount: unassigned } });
     },
   );
 
@@ -288,7 +316,7 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
     applyPrivate(doc, req, body, { team: body.team });
     if (doc.isMinor && body.hideFullNamePublicly === undefined) doc.hideFullNamePublicly = true;
     await doc.save();
-    await audit(req, { action: 'player.created', entityType: 'Player', entityId: doc._id, metadata: { name: `${doc.firstName} ${doc.lastName}`, team: body.team } });
+    await audit(req, { action: 'player.created', entityType: 'Player', entityId: doc._id, metadata: { name: `${doc.firstName} ${doc.lastName}`, team: body.team, squad: doc.squad || null } });
     res.status(201).json({ data: viewFor(req, (await doc.populate(TEAM_POP)).toObject()) });
   });
 
@@ -307,7 +335,7 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
       if (clash) throw AppError.validation([{ path: 'jerseyNumber', message: `Number ${body.jerseyNumber} is already worn by ${clash.firstName} ${clash.lastName}.` }]);
     }
     const { restricted, sensitive, ...rest } = body;
-    const before = { team: idString(player.team), position: player.position, jerseyNumber: player.jerseyNumber, status: player.status };
+    const before = { team: idString(player.team), squad: player.squad || null, position: player.position, jerseyNumber: player.jerseyNumber, status: player.status };
     const oldPhoto = player.photo?.publicId;
     if (!scopeOf(req.auth, 'players.create') && rest.statAdjustments) delete rest.statAdjustments; // official historical totals: club-wide editors only
     for (const key of Object.keys(rest)) if (rest[key] === undefined) delete rest[key];
@@ -315,7 +343,7 @@ export function createPlayerRouters({ auth, audit, config, media, upload, limite
     applyPrivate(player, req, body, player.toObject());
     await player.save();
     if (oldPhoto && oldPhoto !== body.photo?.publicId) await media.destroy({ publicId: oldPhoto });
-    const after = { team: idString(player.team), position: player.position, jerseyNumber: player.jerseyNumber, status: player.status };
+    const after = { team: idString(player.team), squad: player.squad || null, position: player.position, jerseyNumber: player.jerseyNumber, status: player.status };
     await audit(req, {
       action: 'player.updated',
       entityType: 'Player',

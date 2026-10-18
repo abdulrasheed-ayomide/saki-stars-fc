@@ -16,6 +16,7 @@ import { Lightbox } from '../../components/content/Lightbox.jsx';
 import { VideoPlayer, YouTubeEmbed } from '../../components/content/VideoCard.jsx';
 import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
 import { imageUrl, srcSet } from '../../lib/media.js';
+import { squadByValue, squadPath } from '../../config/squads.js';
 
 /** Public player profile: only PUBLIC data is ever returned by the API for this page. */
 export default function PlayerDetailPage() {
@@ -33,7 +34,13 @@ export default function PlayerDetailPage() {
       <div className="bg-brand-900 text-white">
         <Container className="py-8">
           <div className="[&_a]:text-brand-200 [&_span]:text-brand-100 [&_ol]:text-brand-200">
-            <Breadcrumbs items={[{ label: 'Players', to: '/players' }, { label: p.name }]} />
+            <Breadcrumbs
+              items={[
+                { label: 'Players', to: '/players' },
+                ...(squadByValue(p.squad) ? [{ label: squadByValue(p.squad).short, to: squadPath(squadByValue(p.squad)) }] : []),
+                { label: p.name },
+              ]}
+            />
           </div>
           <div className="mt-2 grid gap-6 sm:grid-cols-[14rem_1fr] sm:items-end">
             <PlayerPhoto player={p} className="aspect-[4/5] w-full max-w-56 rounded-lg" width={448} />
@@ -55,6 +62,16 @@ export default function PlayerDetailPage() {
                   <div>
                     <dt className="text-brand-200">Preferred foot</dt>
                     <dd className="font-semibold capitalize">{p.preferredFoot}</dd>
+                  </div>
+                )}
+                {squadByValue(p.squad) && (
+                  <div>
+                    <dt className="text-brand-200">Squad</dt>
+                    <dd>
+                      <Link to={squadPath(squadByValue(p.squad))} className="font-semibold underline hover:text-brand-100">
+                        {squadByValue(p.squad).label}
+                      </Link>
+                    </dd>
                   </div>
                 )}
                 {p.team && (

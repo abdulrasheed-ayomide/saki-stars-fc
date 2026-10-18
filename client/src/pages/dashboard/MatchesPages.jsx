@@ -25,6 +25,7 @@ import { EVENT_LABELS, MATCH_STATUS_LABELS } from '../../lib/labels.js';
 import { FilterBar, useCompetitions, useSeasons, useTeams } from './shared.jsx';
 import { userMessage } from '../../lib/errors.js';
 import { defaultSeasonId, seasonLabel } from '../../lib/seasons.js';
+import { MatchMediaManager } from './MatchMediaManager.jsx';
 
 export function MatchesListPage() {
   useSeo({ title: 'Fixtures & results', noindex: true });
@@ -106,7 +107,9 @@ function MatchEditor({ match, reload }) {
   const { can } = useAuth();
   const navigate = useNavigate();
   const { notify } = useToast();
-  const [tab, setTab] = useState(match && ['completed', 'abandoned', 'live'].includes(match.status) ? 'result' : 'details');
+  // Media staff without match permissions only see the Media tab.
+  const mediaOnly = Boolean(match) && !can('matches.manage', 'matches.report');
+  const [tab, setTab] = useState(mediaOnly ? 'media' : match && ['completed', 'abandoned', 'live'].includes(match.status) ? 'result' : 'details');
   const [del, setDel] = useState(false);
   const isNew = !match;
   const played = match && ['completed', 'abandoned'].includes(match.status);
@@ -127,9 +130,9 @@ function MatchEditor({ match, reload }) {
     ? [{ value: 'details', label: 'Details' }]
     : [
         ...(can('matches.manage') ? [{ value: 'details', label: 'Details' }, { value: 'result', label: 'Result & events' }] : []),
-        { value: 'report', label: 'Match report' },
+        ...(can('matches.report', 'matches.manage') ? [{ value: 'report', label: 'Match report' }] : []),
         ...(can('standings.override') ? [{ value: 'standings', label: 'Table decision' }] : []),
-        ...(can('matches.manage', 'media.manage') ? [{ value: 'media', label: 'Highlights' }] : []),
+        ...(can('matches.manage', 'media.manage') ? [{ value: 'media', label: 'Media' }] : []),
       ];
 
   return (
@@ -159,7 +162,7 @@ function MatchEditor({ match, reload }) {
       {tab === 'result' && match && <ResultForm match={match} onSaved={reload} />}
       {tab === 'report' && match && <ReportForm match={match} onSaved={reload} />}
       {tab === 'standings' && match && <StandingsDecision match={match} onSaved={reload} />}
-      {tab === 'media' && match && <HighlightsForm match={match} onSaved={reload} />}
+      {tab === 'media' && match && <MatchMediaManager match={match} />}
       <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={remove} title="Delete this fixture?" confirmLabel="Delete">
         Only fixtures that have not been played can be deleted.
       </ConfirmDialog>
@@ -509,36 +512,6 @@ function StandingsDecision({ match, onSaved }) {
         </Field>
         <Button type="submit" loading={form.submitting}>Record decision</Button>
       </form>
-    </Card>
-  );
-}
-
-function HighlightsForm({ match, onSaved }) {
-  const { notify } = useToast();
-  const videos = useApi('/admin/videos?limit=100');
-  const [video, setVideo] = useState(match.highlightsVideo?.id || '');
-  const [busy, setBusy] = useState(false);
-  async function save() {
-    setBusy(true);
-    try {
-      await apiRequest(`/admin/matches/${match.id}/highlights`, { method: 'PUT', body: { video: video || null } });
-      notify('Highlights updated.');
-      onSaved();
-    } catch (err) {
-      notify(userMessage(err, 'action'), 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Card className="space-y-4 p-4">
-      <Field label="Highlights video" hint="Add the video under Videos first.">
-        <Select value={video} onChange={(e) => setVideo(e.target.value)}>
-          <option value="">None</option>
-          {(videos.data?.items || []).map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
-        </Select>
-      </Field>
-      <Button onClick={save} loading={busy}>Save</Button>
     </Card>
   );
 }

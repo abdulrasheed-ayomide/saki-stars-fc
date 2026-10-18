@@ -13,4 +13,5 @@ export const VIDEO_CATEGORIES = [
   'Nigeria Youth League (NYL)',
   'NEXT GEN',
   'Club TV',
+  'Full Match',
 ];

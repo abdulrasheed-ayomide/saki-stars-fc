@@ -201,6 +201,7 @@ export function createMediaRouters({ auth, audit, config, media, upload, limiter
     v.status = 'archived';
     await v.save();
     await Match.updateMany({ highlightsVideo: v._id }, { $set: { highlightsVideo: null } });
+    await Match.updateMany({ fullMatchVideo: v._id }, { $set: { fullMatchVideo: null } });
     await audit(req, { action: 'video.deleted', entityType: 'Video', entityId: v._id, metadata: { title: v.title } });
     res.json({ data: { id: idString(v._id) } });
   });

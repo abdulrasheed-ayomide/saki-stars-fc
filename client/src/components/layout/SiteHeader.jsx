@@ -6,6 +6,7 @@ import { Container } from './Container.jsx';
 import { ClubMark } from './ClubMark.jsx';
 import { MobileMenu } from './MobileMenu.jsx';
 import { AccountMenu } from './AccountMenu.jsx';
+import { NavDropdown } from './NavDropdown.jsx';
 
 const MENU_ID = 'main-menu';
 
@@ -28,17 +29,21 @@ export function SiteHeader() {
           <ul className="flex items-center gap-0.5">
             {mainNavigation.map((item) => (
               <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.to === '/'}
-                  className={({ isActive }) =>
-                    `flex min-h-11 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium ${
-                      isActive ? 'bg-white/15 text-white' : 'text-brand-100 hover:bg-white/10 hover:text-white'
-                    }`
-                  }
-                >
-                  {item.label}
-                </NavLink>
+                {item.children ? (
+                  <NavDropdown item={item} />
+                ) : (
+                  <NavLink
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) =>
+                      `flex min-h-11 items-center whitespace-nowrap rounded-md px-2 text-sm font-medium ${
+                        isActive ? 'bg-white/15 text-white' : 'text-brand-100 hover:bg-white/10 hover:text-white'
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                )}
               </li>
             ))}
           </ul>

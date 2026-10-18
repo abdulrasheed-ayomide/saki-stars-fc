@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router';
-import { ArrowRightLeft, CalendarDays, CircleDot, Clock, MapPin, Square, UserRound } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, Clock, MapPin, Square, UserRound } from 'lucide-react';
 import { useApi } from '../../hooks/useApi.js';
 import { useSeo } from '../../hooks/useDocumentTitle.js';
 import { useSettings } from '../../app/SettingsProvider.jsx';
@@ -11,6 +11,9 @@ import { SectionHeading } from '../../components/ui/Card.jsx';
 import { TeamLogo, CompetitionLogo } from '../../components/football/TeamLogo.jsx';
 import { Countdown } from '../../components/football/Countdown.jsx';
 import { VideoPlayer } from '../../components/content/VideoCard.jsx';
+import { SideGoals } from '../../components/football/MatchScorers.jsx';
+import { SoccerBallIcon, FootballBootIcon } from '../../components/football/MatchIcons.jsx';
+import { MatchMediaActions } from '../../components/football/MatchMediaActions.jsx';
 import { Comments } from '../../components/content/Comments.jsx';
 import { Markdown } from '../../lib/markdown.jsx';
 import { formatDateLong, formatTime } from '../../lib/format.js';
@@ -20,7 +23,7 @@ import NotFoundPage from '../NotFoundPage.jsx';
 const STAT_NAMES = { possession: 'Possession (%)', shots: 'Shots', shotsOnTarget: 'Shots on target', corners: 'Corners', fouls: 'Fouls', offsides: 'Offsides' };
 
 function EventIcon({ type }) {
-  if (['goal', 'penalty_goal', 'own_goal'].includes(type)) return <CircleDot aria-hidden="true" className="size-4 text-brand-800" />;
+  if (['goal', 'penalty_goal', 'own_goal'].includes(type)) return <SoccerBallIcon className="size-4 text-brand-800" />;
   if (type === 'yellow_card') return <Square aria-hidden="true" className="size-4 fill-amber-400 text-amber-500" />;
   if (type === 'red_card' || type === 'second_yellow') return <Square aria-hidden="true" className="size-4 fill-red-600 text-red-700" />;
   if (type === 'substitution') return <ArrowRightLeft aria-hidden="true" className="size-4 text-emerald-700" />;
@@ -47,11 +50,6 @@ export default function MatchCentrePage() {
 
   const played = m.status === 'completed' || (m.status === 'abandoned' && m.score);
   const upcoming = ['scheduled', 'postponed'].includes(m.status);
-  const goals = m.events.filter((e) => ['goal', 'penalty_goal', 'own_goal'].includes(e.type));
-  const scorerLine = (side) =>
-    goals
-      .filter((e) => (e.type === 'own_goal' ? e.side !== side : e.side === side))
-      .map((e) => `${e.playerName} ${e.minute}'${e.type === 'penalty_goal' ? ' (pen)' : e.type === 'own_goal' ? ' (og)' : ''}`);
 
   return (
     <>
@@ -73,7 +71,7 @@ export default function MatchCentrePage() {
             <div className="flex min-w-0 flex-col items-center gap-2 text-center">
               <TeamLogo team={m.homeTeam} size="xl" className="rounded-full bg-white p-1" />
               <p className="text-base font-bold sm:text-xl">{m.homeTeam?.name}</p>
-              {played && <ul className="text-xs text-brand-100">{scorerLine('home').map((s, i) => <li key={i}>{s}</li>)}</ul>}
+              {played && <SideGoals events={m.events} side="home" align="center" tone="dark" className="text-xs [&_a]:text-white" />}
             </div>
             <div className="pt-4 text-center">
               {played ? (
@@ -95,7 +93,7 @@ export default function MatchCentrePage() {
             <div className="flex min-w-0 flex-col items-center gap-2 text-center">
               <TeamLogo team={m.awayTeam} size="xl" className="rounded-full bg-white p-1" />
               <p className="text-base font-bold sm:text-xl">{m.awayTeam?.name}</p>
-              {played && <ul className="text-xs text-brand-100">{scorerLine('away').map((s, i) => <li key={i}>{s}</li>)}</ul>}
+              {played && <SideGoals events={m.events} side="away" align="center" tone="dark" className="text-xs [&_a]:text-white" />}
             </div>
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-brand-100">
@@ -117,6 +115,7 @@ export default function MatchCentrePage() {
             )}
           </div>
           {m.statusNote && <p className="mt-3 text-center text-sm text-amber-200">{m.statusNote}</p>}
+          {played && <MatchMediaActions match={m} tone="dark" align="center" className="mt-4" />}
           {m.status === 'scheduled' && (
             <div className="mt-6 flex justify-center">
               <Countdown to={m.kickoffAt} />
@@ -148,7 +147,13 @@ export default function MatchCentrePage() {
                           <>
                             <PlayerName ref_={e.player} name={e.playerName} />
                             <span className="text-slate-500"> · {EVENT_LABELS[e.type]}</span>
-                            {e.assistName && <span className="block text-xs text-slate-500">Assist: {e.assistName}</span>}
+                            {e.assistName && (
+                              <span className={`mt-0.5 flex items-center gap-1 text-xs text-slate-500 ${e.side === 'away' ? 'flex-row-reverse' : ''}`}>
+                                <FootballBootIcon className="size-3.5 text-brand-800" />
+                                <span className="sr-only">Assist: </span>
+                                <span>{e.assistName}</span>
+                              </span>
+                            )}
                           </>
                         )}
                       </span>

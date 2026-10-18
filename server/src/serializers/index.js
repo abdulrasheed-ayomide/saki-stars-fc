@@ -187,6 +187,7 @@ export function publicPlayer(p, { stats } = {}) {
     detailedPosition: p.detailedPosition || '',
     jerseyNumber: p.jerseyNumber ?? null,
     team: teamSummary(p.team),
+    squad: p.squad || null,
     nationality: p.nationality || '',
     bio: p.bio || '',
     preferredFoot: p.preferredFoot || '',

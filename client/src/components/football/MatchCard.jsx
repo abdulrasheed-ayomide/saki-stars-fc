@@ -5,6 +5,8 @@ import { StatusBadge } from '../ui/Badge.jsx';
 import { formatDay, formatTime } from '../../lib/format.js';
 import { MATCH_STATUS_LABELS } from '../../lib/labels.js';
 import { useSettings } from '../../app/SettingsProvider.jsx';
+import { MatchScorers, GOAL_TYPES } from './MatchScorers.jsx';
+import { MatchMediaActions, hasMatchMedia } from './MatchMediaActions.jsx';
 
 export function Scoreline({ match, className = '' }) {
   const { settings } = useSettings();
@@ -70,8 +72,33 @@ function TeamSide({ team, align = 'left' }) {
   );
 }
 
-/** Compact row for long fixture lists. */
+/**
+ * Below a result card: goal scorers (soccer-ball icon) and assists (boot icon), then the
+ * published match media. Renders nothing for a match with neither.
+ */
+export function MatchResultExtras({ match }) {
+  const goals = (match.events || []).some((e) => GOAL_TYPES.includes(e.type));
+  if (!goals && !hasMatchMedia(match)) return null;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      {goals && <MatchScorers match={match} />}
+      <MatchMediaActions match={match} className={goals ? 'mt-2 border-t border-slate-100 pt-1' : ''} />
+    </div>
+  );
+}
+
+/** Compact row for long fixture lists. Played matches with published media get small links below. */
 export function MatchRow({ match }) {
+  if (!hasMatchMedia(match)) return <MatchRowLink match={match} />;
+  return (
+    <div>
+      <MatchRowLink match={match} />
+      <MatchMediaActions match={match} className="px-3 pb-2 sm:pl-[calc(8rem+1.25rem)]" />
+    </div>
+  );
+}
+
+function MatchRowLink({ match }) {
   const { settings } = useSettings();
   return (
     <Link to={`/matches/${match.id}`} className="grid grid-cols-1 gap-2 px-3 py-3 hover:bg-brand-50/50 sm:grid-cols-[8rem_1fr] sm:items-center">

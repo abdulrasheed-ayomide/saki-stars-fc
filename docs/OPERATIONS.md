@@ -85,6 +85,8 @@ Director) so one can always restore the other from the dashboard.
 | Appoint staff, change access | Staff | `staff.manage` |
 | Suspend a user, sign them out, delete personal data | Users | `users.manage` |
 | Fixtures, results, line-ups, scorers, match reports | Matches | `matches.manage`, `matches.report` |
+| Player squad (Senior / Under-19) | Players → player → Squad | `players.create` (new), `players.edit` |
+| Full match video, highlights, match pictures | Matches → match → Media | `media.manage` (all matches) or `matches.manage` (matches in scope) |
 | League table corrections (points deduction etc.) | Standings | `standings.override` |
 | News (draft → review → publish) | News | `news.create`, `news.publish` |
 | Videos (YouTube links), gallery | Videos, Gallery | `media.manage` |
@@ -94,6 +96,18 @@ Director) so one can always restore the other from the dashboard.
 | Club details, homepage text, legal pages | Settings | `settings.manage` |
 | Who did what | Audit log | `audit.view` |
 | Health, integrations, IP check | System | `system.view` |
+
+**Squads.** The Players menu on the website has two pages: Saki Stars FC Senior and Saki Stars FC
+Under-19. A player appears on a squad page only after staff choose their squad (it is never worked
+out from age). Players saved before squads existed show **Not assigned** in Dashboard → Players
+(filter *Squad: Not assigned yet*); until assigned they stay visible under All players and on their
+own profile page.
+
+**Match media.** Under a match's **Media** tab, add a full match video and a highlights video (a
+YouTube link or an uploaded file) and upload match pictures. Each link on the website (Watch Full
+Match, View Pictures, Watch Highlights) only appears once that media is published. Removing a video
+from a match keeps it in the Videos library; removing a picture takes it off the match and the
+Gallery. Linking a video already in the library needs `media.manage`.
 
 League tables are **calculated from results**. They are never typed in. Friendlies never count.
 Abandoned matches count only if marked "result stands". Corrections are recorded with a reason

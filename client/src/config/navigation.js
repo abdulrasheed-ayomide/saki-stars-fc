@@ -1,9 +1,11 @@
-// Main public navigation.
+import { SQUADS, squadPath } from './squads.js';
+
+// Main public navigation. An item with `children` opens a small menu instead of a page.
 export const mainNavigation = [
   { label: 'Home', to: '/' },
   { label: 'Club', to: '/club' },
   { label: 'Teams', to: '/teams' },
-  { label: 'Players', to: '/players' },
+  { label: 'Players', to: '/players', children: SQUADS.map((s) => ({ label: s.label, to: squadPath(s) })) },
   { label: 'Fixtures & Results', to: '/fixtures-results' },
   { label: 'Competitions', to: '/competitions' },
   { label: 'News', to: '/news' },

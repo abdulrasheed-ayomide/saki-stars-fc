@@ -151,7 +151,10 @@ const matchSchema = new Schema(
     // authorised, audited decision that its result stands. Cancelled matches never count.
     countsForStandings: { type: Boolean, default: true },
     resultStands: { type: Boolean, default: false },
+    // Match media. Videos live in the video library (YouTube link or Cloudinary upload) and are
+    // linked here; match photos are gallery items whose `match` is this match.
     highlightsVideo: { type: Schema.Types.ObjectId, ref: 'Video', default: null },
+    fullMatchVideo: { type: Schema.Types.ObjectId, ref: 'Video', default: null },
     resultRecordedAt: { type: Date, default: null },
     resultRecordedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

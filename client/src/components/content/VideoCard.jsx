@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlayCircle, VideoOff } from 'lucide-react';
+import { ExternalLink, PlayCircle, VideoOff } from 'lucide-react';
 import { imageUrl } from '../../lib/media.js';
 
 export function videoThumb(video) {
@@ -25,29 +25,56 @@ export function VideoCard({ video, onPlay }) {
   );
 }
 
-/** Plays YouTube (privacy-enhanced embed) or a Cloudinary-hosted file. */
-export function VideoPlayer({ video }) {
+/** Address of the video on its own site, for "open in a new tab" when it cannot play here. */
+export function videoSourceUrl(video) {
+  if (video?.source === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(video.youtubeId || '')) return `https://www.youtube.com/watch?v=${video.youtubeId}`;
+  if (video?.media?.url && /^https:\/\//.test(video.media.url)) return video.media.url;
+  return null;
+}
+
+/**
+ * Plays YouTube (privacy-enhanced embed) or a Cloudinary-hosted file. With `externalLink`, a small
+ * link underneath opens the same video on YouTube / as a file, for when the owner has turned off
+ * embedding or the browser cannot play the file.
+ */
+export function VideoPlayer({ video, externalLink = false }) {
+  const href = externalLink ? videoSourceUrl(video) : null;
+  const fallback = href && (
+    <p className="mt-2 text-sm">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand-700 hover:underline">
+        <ExternalLink aria-hidden="true" className="size-4" />
+        {video.source === 'youtube' ? 'Video not playing? Watch it on YouTube' : 'Video not playing? Open the video file'}
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+    </p>
+  );
   if (video.source === 'youtube' && video.youtubeId) {
     return (
-      <div className="relative aspect-video overflow-hidden rounded-md bg-black">
-        <iframe
-          className="absolute inset-0 size-full"
-          src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}?rel=0&modestbranding=1`}
-          title={video.title}
-          allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+      <div>
+        <div className="relative aspect-video overflow-hidden rounded-md bg-black">
+          <iframe
+            className="absolute inset-0 size-full"
+            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}?rel=0&modestbranding=1`}
+            title={video.title}
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        {fallback}
       </div>
     );
   }
   if (video.media?.url) {
     return (
-      <video className="aspect-video w-full rounded-md bg-black" controls preload="metadata" poster={video.thumbnailUrl || undefined}>
-        <source src={video.media.url} />
-        Your browser cannot play this video.
-      </video>
+      <div>
+        <video className="aspect-video w-full rounded-md bg-black" controls preload="metadata" poster={video.thumbnailUrl || undefined}>
+          <source src={video.media.url} />
+          Your browser cannot play this video.
+        </video>
+        {fallback}
+      </div>
     );
   }
   return <p className="text-sm text-slate-600">This video is not available.</p>;

@@ -11,7 +11,7 @@ export function createSitemapRouter({ config }) {
   const router = Router();
   router.get('/sitemap.xml', async (req, res) => {
     const base = config.appUrl;
-    const staticPaths = ['/', '/club', '/teams', '/players', '/fixtures-results', '/competitions', '/news', '/videos', '/gallery', '/staff', '/contact', '/privacy', '/terms', '/cookie-policy'];
+    const staticPaths = ['/', '/club', '/teams', '/players', '/players/squad/senior', '/players/squad/under-19', '/fixtures-results', '/competitions', '/news', '/videos', '/gallery', '/staff', '/contact', '/privacy', '/terms', '/cookie-policy'];
     const [news, players, teams, comps, matches] = await Promise.all([
       News.find({ status: 'published', deletedAt: null }).select('slug updatedAt').sort({ publishedAt: -1 }).limit(2000).lean(),
       Player.find(await publicPlayerFilter()).select('slug updatedAt').limit(2000).lean(),

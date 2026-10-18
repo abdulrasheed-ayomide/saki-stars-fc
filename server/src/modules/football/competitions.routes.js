@@ -8,6 +8,7 @@ import { uniqueSlug } from '../../utils/text.js';
 import { idOrSlugFilter, idString } from '../../utils/ids.js';
 import { publicCompetition, competitionSummary, matchSummary, newsSummary } from '../../serializers/index.js';
 import { calculateStandings } from '../../services/standings.service.js';
+import { withMatchMedia } from '../../services/matchMedia.service.js';
 import { MATCH_POPULATE } from './teams.routes.js';
 import { currentSeason } from './seasons.routes.js';
 
@@ -97,7 +98,7 @@ export function createCompetitionRouters({ auth, audit, config, media }) {
         .limit(200)
         .populate(MATCH_POPULATE)
         .lean();
-      res.json({ data: matches.map(matchSummary) });
+      res.json({ data: await withMatchMedia(matches, matchSummary) });
     },
   );
 

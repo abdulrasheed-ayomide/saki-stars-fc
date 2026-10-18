@@ -37,11 +37,11 @@ function TeamName({ team }) {
 }
 
 /** League table calculated by the server from results. */
-export function StandingsTable({ rows, compact = false, highlightClub = true }) {
+export function StandingsTable({ rows, compact = false, highlightClub = true, caption = 'League table' }) {
   return (
     <div className="relative overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <table className={`w-full border-collapse text-sm ${compact ? 'sm:min-w-[22rem]' : 'sm:min-w-[40rem]'}`}>
-        <caption className="sr-only">League table</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead className="whitespace-nowrap bg-brand-900 text-xs uppercase tracking-wide text-white">
           <tr>
             <th scope="col" className="w-12 whitespace-nowrap px-1.5 py-2 sm:px-2 text-center" title="Position">

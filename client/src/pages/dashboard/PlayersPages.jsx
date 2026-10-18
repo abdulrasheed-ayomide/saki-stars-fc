@@ -28,6 +28,9 @@ import { GalleryForm, VideoForm } from './ContentPages.jsx';
 import { SafeImage, ImageUnavailable } from '../../components/ui/SafeImage.jsx';
 import { videoThumb } from '../../components/content/VideoCard.jsx';
 import { imageUrl } from '../../lib/media.js';
+import { SQUADS, squadByValue } from '../../config/squads.js';
+
+const SQUAD_REQUIRED = 'Choose the player’s squad: Senior or Under-19.';
 
 const STATUSES = [
   ['active', 'Active'],
@@ -43,7 +46,7 @@ export function PlayersListPage() {
   const { can } = useAuth();
   const navigate = useNavigate();
   const teams = useTeams({ clubOnly: true });
-  const [f, setF] = useState({ q: '', team: '', position: '', status: '' });
+  const [f, setF] = useState({ q: '', team: '', squad: '', position: '', status: '' });
   const [page, setPage] = useState(1);
   const q = useDebounce(f.q, 300);
   const state = useApi(`/admin/players${qs({ ...f, q, page })}`);
@@ -68,6 +71,13 @@ export function PlayersListPage() {
             {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </Field>
+        <Field label="Squad">
+          <Select value={f.squad} onChange={upd('squad')}>
+            <option value="">All squads</option>
+            {SQUADS.map((sq) => <option key={sq.value} value={sq.value}>{sq.label}</option>)}
+            <option value="unassigned">Not assigned yet</option>
+          </Select>
+        </Field>
         <Field label="Position">
           <Select value={f.position} onChange={upd('position')}>
             <option value="">All</option>
@@ -81,6 +91,16 @@ export function PlayersListPage() {
           </Select>
         </Field>
       </FilterBar>
+      {state.data?.unassignedSquadCount > 0 && f.squad !== 'unassigned' && (
+        <Alert tone="warning" className="mb-4">
+          {state.data.unassignedSquadCount === 1 ? '1 player has' : `${state.data.unassignedSquadCount} players have`} no squad yet, so they are not listed on the
+          Senior or Under-19 squad pages (they still appear under All players).{' '}
+          <button type="button" className="font-semibold underline" onClick={() => { setF((x) => ({ ...x, squad: 'unassigned' })); setPage(1); }}>
+            Show them
+          </button>{' '}
+          and open each player to choose their squad.
+        </Alert>
+      )}
       <AsyncContent state={state} isEmpty={(d) => !d.items.length} empty={<EmptyState icon={Shirt} title="No players found" />}>
         {(d) => (
           <>
@@ -93,6 +113,7 @@ export function PlayersListPage() {
                 { key: 'name', label: 'Name', render: (p) => <span className="font-medium">{p.fullName}</span> },
                 { key: 'pos', nowrap: true, label: 'Position', render: (p) => p.position },
                 { key: 'team', label: 'Team', render: (p) => p.team?.name || '–' },
+                { key: 'squad', label: 'Squad', render: (p) => (squadByValue(p.squad) ? squadByValue(p.squad).short : <Badge tone="warning">Not assigned</Badge>) },
                 { key: 'flags', label: '', render: (p) => <span className="flex flex-wrap gap-1">{p.isMinor && <Badge tone="warning">U18</Badge>}{p.hasAccount && <Badge tone="brand">Portal</Badge>}{!p.showOnWebsite && <Badge>Hidden</Badge>}</span> },
                 { key: 'status', nowrap: true, label: 'Status', render: (p) => <StatusBadge status={p.status} label={STATUSES.find(([k]) => k === p.status)?.[1]} /> },
               ]}
@@ -117,6 +138,7 @@ function toForm(p) {
     detailedPosition: p?.detailedPosition || '',
     jerseyNumber: p?.jerseyNumber ?? '',
     team: p?.team?.id || '',
+    squad: p?.squad || '',
     nationality: p?.nationality || '',
     bio: p?.bio || '',
     preferredFoot: p?.preferredFoot || '',
@@ -145,6 +167,8 @@ function toBody(v, { restricted, sensitive, canAdjust }) {
     ...v,
     jerseyNumber: v.jerseyNumber === '' ? null : Number(v.jerseyNumber),
     team: v.team || null,
+    // Empty only for older records not assigned yet: omitted, so the server keeps it unchanged.
+    squad: v.squad || undefined,
     joinedAt: v.joinedAt || null,
     photo: v.photo || null,
     restricted: restricted ? { ...v.restricted, dateOfBirth: v.restricted.dateOfBirth || null } : undefined,
@@ -179,6 +203,8 @@ function PlayerForm({ player, onSaved }) {
   const [archive, setArchive] = useState(false);
 
   const onSubmit = form.submit(async (values) => {
+    // New players must be placed in a squad (the server checks the value too).
+    if (isNew && !values.squad) throw Object.assign(new Error(SQUAD_REQUIRED), { code: 'VALIDATION_ERROR', details: [{ path: 'squad', message: SQUAD_REQUIRED }] });
     const body = toBody(values, { restricted: showRestricted, sensitive: showSensitive, canAdjust });
     const saved = await apiRequest(isNew ? '/admin/players' : `/admin/players/${player.id}`, { method: isNew ? 'POST' : 'PUT', body });
     notify(isNew ? 'Player created.' : 'Player saved.');
@@ -248,6 +274,17 @@ function PlayerForm({ player, onSaved }) {
                 </Field>
                 <Field label="Nationality" error={e.nationality}>
                   <Input value={v.nationality} onChange={set('nationality')} maxLength={60} />
+                </Field>
+                <Field
+                  label="Squad"
+                  required={isNew}
+                  error={e.squad}
+                  hint={!isNew && !v.squad ? 'Not assigned yet: this player is not listed on a squad page until you choose one.' : 'Which squad page lists this player on the website.'}
+                >
+                  <Select value={v.squad} onChange={set('squad')}>
+                    <option value="" disabled={!isNew && Boolean(player?.squad)}>Choose a squad…</option>
+                    {SQUADS.map((sq) => <option key={sq.value} value={sq.value}>{sq.label}</option>)}
+                  </Select>
                 </Field>
                 <Field label="Team" error={e.team}>
                   <Select value={v.team} onChange={set('team')}>

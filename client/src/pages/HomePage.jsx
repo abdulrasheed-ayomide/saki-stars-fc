@@ -10,7 +10,7 @@ import { SectionHeading } from '../components/ui/Card.jsx';
 import { EmptyState, Skeleton, SkeletonGrid } from '../components/ui/Feedback.jsx';
 import { TeamLogo, CompetitionLogo } from '../components/football/TeamLogo.jsx';
 import { Countdown } from '../components/football/Countdown.jsx';
-import { MatchCard } from '../components/football/MatchCard.jsx';
+import { MatchCard, MatchResultExtras } from '../components/football/MatchCard.jsx';
 import { StandingsTable } from '../components/football/StandingsTable.jsx';
 import { PlayerCard } from '../components/football/PlayerCard.jsx';
 import { NewsCard } from '../components/content/NewsCard.jsx';
@@ -160,20 +160,7 @@ function NextMatch() {
           ) : latest.data ? (
             <div className="space-y-3">
               <MatchCard match={latest.data} />
-              {latest.data.events?.filter((e) => ['goal', 'penalty_goal', 'own_goal'].includes(e.type)).length > 0 && (
-                <ul className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                  {latest.data.events
-                    .filter((e) => ['goal', 'penalty_goal', 'own_goal'].includes(e.type))
-                    .map((e) => (
-                      <li key={e.id} className={`flex gap-2 py-0.5 ${e.side === 'away' ? 'justify-end text-right' : ''}`}>
-                        <span className="font-medium">{e.playerName}</span>
-                        <span className="text-slate-500">
-                          {e.minute}&apos;{e.type === 'penalty_goal' ? ' (pen)' : e.type === 'own_goal' ? ' (og)' : ''}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
-              )}
+              <MatchResultExtras match={latest.data} />
             </div>
           ) : (
             <EmptyState icon={Trophy} title="No results yet">
@@ -212,32 +199,75 @@ function LatestNews() {
   );
 }
 
-function Standings() {
+// The landing page previews at most this many competitions, each with the top of its table.
+// The full list stays on /competitions and every full table on the competition's own page.
+const HOME_COMPETITIONS = 4;
+const HOME_TABLE_ROWS = 5;
+
+function CompetitionPreview({ competition: c }) {
+  const table = useApi(`/competitions/${c.id}/standings`);
+  const rows = table.data?.rows || [];
+  const fullTable = `/competitions/${c.slug}?tab=table`;
+  const shown = rows.slice(0, HOME_TABLE_ROWS);
+  return (
+    <article aria-labelledby={`comp-${c.id}`} className="flex w-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <header className="mb-3 flex min-w-0 items-center gap-3">
+        <CompetitionLogo competition={c} className="size-9 shrink-0" />
+        <div className="min-w-0">
+          <h3 id={`comp-${c.id}`} className="truncate font-bold text-brand-900" title={c.name}>
+            <Link to={`/competitions/${c.slug}`} className="hover:underline">
+              {c.name}
+            </Link>
+          </h3>
+          {table.data?.season && <p className="text-xs text-slate-500">Season {table.data.season.name}</p>}
+        </div>
+      </header>
+      {table.loading && !table.data ? (
+        <Skeleton className="h-56" />
+      ) : table.error && !table.data ? (
+        <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">The table could not be loaded right now.</p>
+      ) : shown.length ? (
+        <>
+          <StandingsTable rows={shown} compact caption={`${c.name}: top ${shown.length} of ${rows.length}`} />
+          <p className="mt-2 text-xs text-slate-500">
+            {rows.length > shown.length ? `Top ${shown.length} of ${rows.length} teams.` : `All ${rows.length} team${rows.length === 1 ? '' : 's'}.`}
+          </p>
+        </>
+      ) : (
+        <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">The table will appear after the first results.</p>
+      )}
+      <div className="mt-auto pt-2">
+        <MoreLink to={fullTable}>
+          Full table<span className="sr-only">: {c.name}</span>
+        </MoreLink>
+      </div>
+    </article>
+  );
+}
+
+function Competitions() {
   const comps = useApi('/competitions');
-  const league = (comps.data || []).find((c) => c.type === 'league');
-  const table = useApi(league ? `/competitions/${league.id}/standings` : null);
+  // Same order and visibility as the competitions page (the API's display order); league tables only.
+  const leagues = (comps.data || []).filter((c) => c.type === 'league');
+  const preview = leagues.slice(0, HOME_COMPETITIONS);
   if (comps.loading && !comps.data) return null;
   return (
     <Section id="standings-title" className="bg-white">
-      <SectionHeading
-        id="standings-title"
-        eyebrow="Competitions"
-        title={league ? league.name : 'League table'}
-        action={league ? <MoreLink to={`/competitions/${league.slug}`}>Full table</MoreLink> : <MoreLink to="/competitions">Competitions</MoreLink>}
-      />
-      {!league ? (
+      <SectionHeading id="standings-title" eyebrow="Competitions" title="League tables" action={<MoreLink to="/competitions">View All Competitions</MoreLink>} />
+      {comps.error && !comps.data ? (
+        <EmptyState icon={Trophy} title="Competitions could not be loaded right now" />
+      ) : !preview.length ? (
         <EmptyState icon={Trophy} title="No league table yet">
           Tables appear once the club&apos;s competitions and results are added.
         </EmptyState>
-      ) : table.loading && !table.data ? (
-        <Skeleton className="h-64" />
-      ) : table.data?.rows?.length ? (
-        <>
-          <StandingsTable rows={table.data.rows} compact />
-          {table.data.season && <p className="mt-2 text-xs text-slate-500">Season {table.data.season.name}. Calculated from recorded results.</p>}
-        </>
       ) : (
-        <EmptyState icon={Trophy} title="The table will appear after the first results" />
+        <ul className="grid gap-4 lg:grid-cols-2">
+          {preview.map((c) => (
+            <li key={c.id} className="flex min-w-0">
+              <CompetitionPreview competition={c} />
+            </li>
+          ))}
+        </ul>
       )}
     </Section>
   );
@@ -386,7 +416,7 @@ export default function HomePage() {
       <Hero />
       <NextMatch />
       <LatestNews />
-      <Standings />
+      <Competitions />
       <TeamsAndPlayers />
       <LatestVideos />
       <ClubStats />

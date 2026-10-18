@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { mainNavigation } from '../../config/navigation.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { ClubMark } from './ClubMark.jsx';
+import { MobileNavGroup } from './NavDropdown.jsx';
 
 const FOCUSABLE = 'a[href], button:not([disabled])';
 
@@ -71,9 +72,13 @@ export function MobileMenu({ id, onClose }) {
         <ul className="grid gap-1 sm:grid-cols-2">
           {mainNavigation.map((item) => (
             <li key={item.to}>
-              <NavLink to={item.to} end={item.to === '/'} onClick={onClose} className={link}>
-                {item.label}
-              </NavLink>
+              {item.children ? (
+                <MobileNavGroup item={item} onNavigate={onClose} linkClass={link} />
+              ) : (
+                <NavLink to={item.to} end={item.to === '/'} onClick={onClose} className={link}>
+                  {item.label}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>

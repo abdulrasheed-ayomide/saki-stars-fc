@@ -44,7 +44,7 @@ export const DASHBOARD_NAV = [
       { to: '/dashboard/teams', label: 'Teams', icon: Shield, any: ['teams.manage'] },
       { to: '/dashboard/competitions', label: 'Competitions', icon: Trophy, any: ['competitions.manage'] },
       { to: '/dashboard/seasons', label: 'Seasons', icon: CalendarDays, any: ['competitions.manage'] },
-      { to: '/dashboard/matches', label: 'Fixtures & results', icon: Activity, any: ['matches.manage', 'matches.report'] },
+      { to: '/dashboard/matches', label: 'Fixtures & results', icon: Activity, any: ['matches.manage', 'matches.report', 'media.manage'] },
       { to: '/dashboard/standings', label: 'Standings', icon: ListOrdered, any: ['standings.override', 'competitions.manage'] },
     ],
   },

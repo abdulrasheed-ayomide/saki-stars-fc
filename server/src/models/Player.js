@@ -7,6 +7,14 @@ const { Schema } = mongoose;
 export const POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
 export const PLAYER_STATUSES = ['active', 'inactive', 'injured', 'on_loan', 'released', 'archived'];
 
+/**
+ * The public squad a player is listed in. Chosen by staff (never derived from age).
+ * Records saved before squads existed have no value (null) and are "not assigned yet":
+ * they stay on /players and their profile, and staff see them flagged in the dashboard.
+ */
+export const SQUADS = ['senior', 'under19'];
+export const SQUAD_LABELS = { senior: 'Saki Stars FC Senior', under19: 'Saki Stars FC Under-19' };
+
 const documentSchema = new Schema(
   {
     name: { type: String, required: true, maxlength: 150 },
@@ -39,6 +47,7 @@ const playerSchema = new Schema(
     detailedPosition: { type: String, maxlength: 60, default: '' },
     jerseyNumber: { type: Number, min: 1, max: 99, default: null },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
+    squad: { type: String, enum: [...SQUADS, null], default: null },
     nationality: { type: String, trim: true, maxlength: 60, default: '' },
     bio: { type: String, maxlength: 4000, default: '' },
     preferredFoot: { type: String, enum: ['left', 'right', 'both', ''], default: '' },
