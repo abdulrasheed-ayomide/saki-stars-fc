@@ -46,6 +46,12 @@ export const PERMISSIONS = Object.freeze({
   'matches.report': { group: 'Football', label: 'Write and publish match reports', scopes: [A, T] },
   'standings.override': { group: 'Football', label: 'Apply audited standings corrections', scopes: [A] },
 
+  // Player transfers are private club records. No role receives these by default: the Director
+  // grants them per person (Directors always hold every permission).
+  'transfers.view': { group: 'Transfers', label: 'View player transfer records, private notes and documents', scopes: [A] },
+  'transfers.manage': { group: 'Transfers', label: 'Create and edit transfer drafts, submit them for approval, cancel drafts', scopes: [A] },
+  'transfers.approve': { group: 'Transfers', label: 'Approve or reject transfers, mark them in progress or completed, cancel approved transfers', scopes: [A] },
+
   'news.create': { group: 'Content', label: 'Write news and submit for review', scopes: [A] },
   'news.edit': { group: 'Content', label: "Edit other people's news articles", scopes: [A] },
   'news.publish': { group: 'Content', label: 'Publish and archive news', scopes: [A] },

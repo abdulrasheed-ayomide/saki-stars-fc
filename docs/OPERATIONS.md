@@ -88,6 +88,7 @@ Director) so one can always restore the other from the dashboard.
 | Player squad (Senior / Under-19) | Players → player → Squad | `players.create` (new), `players.edit` |
 | Full match video, highlights, match pictures | Matches → match → Media | `media.manage` (all matches) or `matches.manage` (matches in scope) |
 | League table corrections (points deduction etc.) | Standings | `standings.override` |
+| Player transfers (view / create and submit / approve and complete) | Player transfers | `transfers.view`, `transfers.manage`, `transfers.approve` |
 | News (draft → review → publish) | News | `news.create`, `news.publish` |
 | Videos (YouTube links), gallery | Videos, Gallery | `media.manage` |
 | Comment moderation | Comments | `comments.moderate` |
@@ -102,6 +103,15 @@ Under-19. A player appears on a squad page only after staff choose their squad (
 out from age). Players saved before squads existed show **Not assigned** in Dashboard → Players
 (filter *Squad: Not assigned yet*); until assigned they stay visible under All players and on their
 own profile page.
+
+**Player transfers.** Private records of players joining (incoming) and leaving (outgoing) the
+club: Draft → Pending approval → Approved → In progress → Completed, or Rejected / Cancelled. Only
+drafts can be edited. Only the Director has the three transfer permissions at first; grant them per
+person under Staff. Someone other than the submitter must approve (Directors excepted). Completing a
+transfer changes the player's record only if "Also update the player's record" is ticked, and never
+announces anything: "Create news draft" makes an unpublished article for the normal News review.
+A new player arriving from another club is described by name on the transfer; register them under
+Players when ready and link the transfer to their record.
 
 **Match media.** Under a match's **Media** tab, add a full match video and a highlights video (a
 YouTube link or an uploaded file) and upload match pictures. Each link on the website (Watch Full

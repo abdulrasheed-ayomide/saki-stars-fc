@@ -22,3 +22,14 @@ export {
   migrateLegacyVideoCategories,
 } from './Content.js';
 export { Report, ScoutingAssignment, ScoutingReport, AuditLog, ClubSettings, REPORT_TYPES, REPORT_STATUSES } from './Operations.js';
+export {
+  Transfer,
+  TransferCounter,
+  nextTransferReference,
+  TRANSFER_DIRECTIONS,
+  TRANSFER_TYPES,
+  TRANSFER_WINDOWS,
+  TRANSFER_STATUSES,
+  OPEN_TRANSFER_STATUSES,
+  TRANSFER_DOCUMENT_KINDS,
+} from './Transfer.js';
