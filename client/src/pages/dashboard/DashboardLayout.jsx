@@ -6,6 +6,7 @@ import { useSettings } from '../../app/SettingsProvider.jsx';
 import { useUnreadCount } from '../../hooks/useUnreadCount.js';
 import { AccountMenu } from '../../components/layout/AccountMenu.jsx';
 import { ServerStatusNotice } from '../../components/feedback/ServerStatusNotice.jsx';
+import { SecurityNotice } from '../../components/feedback/SecurityNotice.jsx';
 import { PageSpinner } from '../../components/ui/Spinner.jsx';
 import { DASHBOARD_NAV } from './nav.js';
 import { initials } from '../../lib/format.js';
@@ -144,6 +145,7 @@ export default function DashboardLayout() {
         </main>
       </div>
       <ScrollRestoration />
+      <SecurityNotice />
     </div>
   );
 }
