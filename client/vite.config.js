@@ -25,6 +25,9 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.js'],
+      // The dashboard security reminder opens a dialog on every dashboard page; it is off for the
+      // test suite (so other dialogs can be tested) and switched on in its own tests.
+      env: { VITE_SECURITY_NOTICE_ENABLED: 'false' },
       include: ['src/**/*.test.{js,jsx}'],
     },
   };
