@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowLeftRight,
   Bell,
   Binoculars,
   CalendarDays,
@@ -46,6 +47,7 @@ export const DASHBOARD_NAV = [
       { to: '/dashboard/seasons', label: 'Seasons', icon: CalendarDays, any: ['competitions.manage'] },
       { to: '/dashboard/matches', label: 'Fixtures & results', icon: Activity, any: ['matches.manage', 'matches.report', 'media.manage'] },
       { to: '/dashboard/standings', label: 'Standings', icon: ListOrdered, any: ['standings.override', 'competitions.manage'] },
+      { to: '/dashboard/transfers', label: 'Player transfers', icon: ArrowLeftRight, any: ['transfers.view'] },
     ],
   },
   {

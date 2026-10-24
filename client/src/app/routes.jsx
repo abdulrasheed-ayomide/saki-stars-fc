@@ -74,6 +74,10 @@ const StandingsAdminPage = named(football, 'StandingsAdminPage');
 const matches = () => import('../pages/dashboard/MatchesPages.jsx');
 const MatchesListPage = named(matches, 'MatchesListPage');
 const MatchEditPage = named(matches, 'MatchEditPage');
+const transfers = () => import('../pages/dashboard/TransfersPages.jsx');
+const TransfersListPage = named(transfers, 'TransfersListPage');
+const TransferEditPage = named(transfers, 'TransferEditPage');
+const TransferDetailPage = named(transfers, 'TransferDetailPage');
 const content = () => import('../pages/dashboard/ContentPages.jsx');
 const NewsListPage = named(content, 'NewsListPage');
 const NewsEditorPage = named(content, 'NewsEditorPage');
@@ -193,6 +197,10 @@ export const routes = [
       { path: 'matches', element: guard(['matches.manage', 'matches.report', 'media.manage'], <MatchesListPage />) },
       { path: 'matches/new', element: guard(['matches.manage'], <MatchEditPage />) },
       { path: 'matches/:id', element: guard(['matches.manage', 'matches.report', 'media.manage'], <MatchEditPage />) },
+      { path: 'transfers', element: guard(['transfers.view'], <TransfersListPage />) },
+      { path: 'transfers/new', element: guard(['transfers.manage'], <TransferEditPage />) },
+      { path: 'transfers/:id', element: guard(['transfers.view'], <TransferDetailPage />) },
+      { path: 'transfers/:id/edit', element: guard(['transfers.manage'], <TransferEditPage />) },
       { path: 'news', element: guard(['news.create', 'news.edit', 'news.publish', 'news.delete'], <NewsListPage />) },
       { path: 'news/new', element: guard(['news.create', 'news.edit'], <NewsEditorPage />) },
       { path: 'news/:id', element: guard(['news.create', 'news.edit', 'news.publish', 'news.delete'], <NewsEditorPage />) },

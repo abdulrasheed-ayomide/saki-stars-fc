@@ -22,6 +22,7 @@ import { createAuditRouter } from './modules/audit/audit.routes.js';
 import { createDashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { createPortalRouter } from './modules/portal/portal.routes.js';
 import { createSitemapRouter } from './modules/sitemap.routes.js';
+import { createTransfersRouter } from './modules/transfers/transfers.routes.js';
 
 /**
  * Public, account, portal and staff (/admin) routes. Every /admin route checks
@@ -81,6 +82,7 @@ export function mountRoutes(api, ctx) {
   admin.use('/announcements', notifications.admin);
   admin.use('/reports', createReportsRouter(ctx));
   admin.use('/scouting', createScoutingRouter(ctx));
+  admin.use('/transfers', createTransfersRouter(ctx));
   admin.use('/contact', contact.admin);
   admin.use('/settings', settings.admin);
   admin.use('/search', search.admin);
